@@ -1,2 +1,2 @@
-# EvenUP
+# EvenUp
 Group expenses management application.
