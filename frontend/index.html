@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="apple-mobile-web-app-title" content="EvenUp">
+    <meta name="application-name" content="EvenUp">
+    <link rel="apple-touch-icon" sizes="192x192" href="./media/icons/evenup-192x192.png">
+    <script src="./js/pwa.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EvenUp - Home</title>
+
+    <!-- Bulma CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.9.4/css/bulma.min.css">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Google Fonts - Lexend -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#4DF7EC">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="stylesheet" href="./css/styles.css">
+    <link rel="shortcut icon" href="./media/icons/evenup.ico" type="image/x-icon">
+</head>
+
+<body>
+    <!-- Navbar -->
+    <nav class="navbar" role="navigation" aria-label="main navigation">
+        <div class="container">
+            <div class="navbar-brand">
+                <a class="navbar-item" href="./index.html">
+                    <img src="./media/evenup.png" alt="EvenUp icon image">
+                    <strong>EVEN UP</strong>
+                </a>
+
+                <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="navbarMenu">
+                    <span aria-hidden="true"></span>
+                    <span aria-hidden="true"></span>
+                    <span aria-hidden="true"></span>
+                </a>
+            </div>
+
+            <div id="navbarMenu" class="navbar-menu">
+                <div class="navbar-start">
+                    <a class="navbar-item" href="./index.html">Home</a>
+                </div>
+
+                <div class="navbar-end">
+                    <div class="navbar-item">
+                        <div class="buttons">
+                            <a class="button is-light" href="./login.html">
+                                <strong>Sign In</strong>
+                            </a>
+                            <a class="button is-primary" href="./signup.html">
+                                <strong>Sign Up</strong>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Theme Toggle Button -->
+    <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+        <i class="fas fa-sun icon sun-icon"></i>
+        <i class="fas fa-moon icon moon-icon"></i>
+    </button>
+
+    <!-- Hero Section -->
+    <section class="hero is-fullheight hero-section" id="home">
+        <div class="hero-body">
+            <div class="container">
+                <div class="columns is-vcentered">
+                    <!-- Content Column -->
+                    <div class="column is-6">
+                        <div class="hero-content">
+                            <h1 class="hero-title">EVEN UP</h1>
+                            <div class="hero-subtitle">
+                                <h2 class="title is-4 has-text-grey-dark mb-4">INTRODUCTION</h2>
+                                <p>Even Up makes it easy for friends to split expenses fairly. Whether it’s dinner, a
+                                    trip, or any shared activity, our platform helps you track contributions and settle
+                                    balances effortlessly. No more awkward money talks—just simple, transparent, and
+                                    stress-free sharing. Start organizing your group expenses today and keep everything
+                                    balanced with Even Up!</p>
+                            </div>
+
+                            <div class="button-group is-flex is-align-items-center">
+                                <a class="button cta-button is-large" href="./signup.html">
+                                    SIGN UP
+                                </a>
+                                <button class="button arrow-button" href="./signup.html">
+                                    <a class="fas fa-arrow-right" href="./signup.html"></a>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Image Column -->
+                    <div class="column is-6">
+                        <div class="hero-image-container">
+                            <div class="hero-image-frame">
+                                <div class="hero-image">
+                                    <img class="group_image" src="./media/hero_image.jpg" alt="Friends group image">
+                                </div>
+                            </div>
+                            <div class="floating-dot"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script src="./js/main.js"></script>
+</body>
+
+</html>
