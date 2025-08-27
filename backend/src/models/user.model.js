@@ -13,23 +13,30 @@ module.exports = {
         db.query(sql, callback);
     },
 
+    getProfile: (id, callback) => {
+        const sql = 'SELECT name,username,phone,email,password_hash FROM app_users WHERE user_id = ?';
+        db.query(sql, id, callback);
+    },
+
     getById: (id, callback) => {
         const sql = 'SELECT user_id, name, username, phone, email, created_at FROM app_users WHERE user_id = ?';
         db.query(sql, id, callback);
     },
-
 
     getByUsername: (username, callback) => {
         const sql = 'SELECT * FROM app_users WHERE username = ?';
         db.query(sql, username, callback);
     },
 
+    getByEmail: (email, callback) => {
+        const sql = 'SELECT * FROM app_users WHERE email = ?';
+        db.query(sql, email, callback);
+    },
 
     update: (id, userData, callback) => {
         const sql = 'UPDATE app_users SET ? WHERE user_id = ?';
         db.query(sql, [userData, id], callback);
     },
-
 
     remove: (id, callback) => {
         const sql = 'DELETE FROM app_users WHERE user_id = ?';

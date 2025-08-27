@@ -93,7 +93,7 @@ exports.getUserById = async (req, res) => {
 //Update a user
 exports.updateUser = async (req, res) => {
     const { id } = req.params;
-    const { name, username, phone, email, password } = req.body;
+    const { username, phone, email, password } = req.body;
 
     try {
         // Check if user exists
@@ -119,7 +119,6 @@ exports.updateUser = async (req, res) => {
         const updates = [];
         const params = [];
 
-        if (name) { updates.push('name = ?'); params.push(name); }
         if (username) { updates.push('username = ?'); params.push(username); }
         if (phone) { updates.push('phone = ?'); params.push(phone); }
         if (email) { updates.push('email = ?'); params.push(email); }
@@ -168,6 +167,29 @@ exports.deleteUser = async (req, res) => {
         console.error('Error deleting user:', error);
         res.status(500).json({ 
             error: 'Error deleting user',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+};
+
+// Get profile information
+
+exports.getProfile = async (req, res) => {
+    try {
+        const [user] = await db.query(
+            'SELECT user_id, name, username, email, phone, created_at FROM app_users WHERE user_id = ?',
+            [req.user.id]
+        );
+
+        if (user.length === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        res.json(user[0]);
+    } catch (error) {
+        console.error('Error getting user profile:', error);
+        res.status(500).json({ 
+            error: 'Error getting user profile',
             details: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     }

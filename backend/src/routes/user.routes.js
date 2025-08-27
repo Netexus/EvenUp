@@ -19,6 +19,11 @@ router.get('/:id', (req, res) => {
   userController.getUserById(req, res);
 });
 
+// Get profile information
+router.get('/profile/:id', (req, res) => {
+  userController.getProfile(req, res);
+});
+
 // Update user by ID
 router.put('/:id', (req, res) => {
   userController.updateUser(req, res);
@@ -26,7 +31,8 @@ router.put('/:id', (req, res) => {
 
 // Delete user by ID
 router.delete('/:id', (req, res) => {
-    res.send(Eliminar usuario con ID ${req.params.id});
+  res.send(`User deleted with ID ${req.params.id}`);
+    userController.deleteUser(req, res);
 });
 
 // Export routes
