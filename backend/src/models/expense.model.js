@@ -2,11 +2,11 @@ const pool = require('../config/database');
 
 const Expense = {
   async create(expenseData) {
-    const { group_id, paid_by, amount, description = null, category = null, date } = expenseData;
+    const { group_id, paid_by, amount, description = null, category = null, expense_name = null, date } = expenseData;
     const [result] = await pool.execute(
-      `INSERT INTO expenses (group_id, paid_by, amount, description, category, date)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [group_id, paid_by, amount, description, category, date]
+      `INSERT INTO expenses (group_id, paid_by, amount, description, category, expense_name, date)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [group_id, paid_by, amount, description, category, expense_name, date]
     );
     return this.getById(result.insertId);
   },
@@ -37,7 +37,7 @@ const Expense = {
   async update(expenseId, data) {
     const fields = [];
     const values = [];
-    const allowed = ['group_id', 'paid_by', 'amount', 'description', 'category', 'date'];
+    const allowed = ['group_id', 'paid_by', 'amount', 'description', 'category', 'expense_name', 'date'];
     for (const k of allowed) {
       if (Object.prototype.hasOwnProperty.call(data, k)) {
         fields.push(`${k} = ?`);
