@@ -1,6 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
-
+<html lang="en">
 <head>
     <link rel="manifest" href="/manifest.json">
     <meta name="apple-mobile-web-app-title" content="EvenUp">
@@ -10,35 +9,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EvenUp - Sign In</title>
-
+    
     <!-- Bulma CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.9.4/css/bulma.min.css">
-
+    
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
+    
     <!-- Google Fonts - Lexend -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap"
-        rel="stylesheet">
-
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#4DF7EC">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="stylesheet" href="./css/styles.css">
     <link rel="shortcut icon" href="./media/evenup.png" type="image/x-icon">
-
 </head>
 
 <body>
-    <!-- Navbar -->
+    <!-- Navigation -->
     <nav class="navbar" role="navigation" aria-label="main navigation">
         <div class="container">
             <div class="navbar-brand">
                 <a class="navbar-item" href="./index.html">
-                    <img src="./media/evenup.png" alt="EvenUp icon image">
+                    <img src="./media/evenup.png" alt="EvenUp icon image" class="navbar-logo">
                     <strong>EVEN UP</strong>
                 </a>
 
@@ -48,30 +45,23 @@
                     <span aria-hidden="true"></span>
                 </a>
             </div>
-
             <div id="navbarMenu" class="navbar-menu">
+                <div class="navbar-start">
+                    <a class="navbar-item" href="./index.html">Home</a>
+                </div>
+
                 <div class="navbar-end">
                     <div class="navbar-item">
-                        <!-- Home Button -->
-                        <a href="./index.html" class="home-button">
-                            <strong>HOME</strong>
-                        </a>
+                        <div class="buttons">
+                            <a class="button is-primary" href="./signup.html">
+                                <strong>Sign Up</strong>
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </nav>
-
-    <!-- Theme Toggle Button -->
-    <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
-        <i class="fas fa-sun icon sun-icon"></i>
-        <i class="fas fa-moon icon moon-icon"></i>
-    </button>
-
-    <!-- Home Button -->
-    <a href="./index.html" class="home-button">
-        <strong>Home</strong>
-    </a>
 
     <!-- Theme Toggle Button -->
     <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
@@ -91,8 +81,7 @@
                     <label for="username">Username</label>
                     <div class="input-container">
                         <i class="fas fa-user input-icon"></i>
-                        <input class="input" type="text" id="username" name="username" placeholder="Pegasso-admon"
-                            required />
+                        <input class="input" type="text" id="username" name="username" placeholder="pegasso-admin" required />
                     </div>
                 </div>
 
@@ -100,8 +89,7 @@
                     <label for="password">Password</label>
                     <div class="input-container">
                         <i class="fas fa-lock input-icon"></i>
-                        <input class="input" type="password" id="password" name="password"
-                            placeholder="••••••••••••••••••••••" required />
+                        <input class="input" type="password" id="password" name="password" placeholder="Enter your password" required />
                     </div>
                 </div>
 
@@ -118,5 +106,4 @@
 
     <script src="./js/main.js"></script>
 </body>
-
 </html>

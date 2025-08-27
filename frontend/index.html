@@ -1,6 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
-
+<html lang="en">
 <head>
     <link rel="manifest" href="/manifest.json">
     <meta name="apple-mobile-web-app-title" content="EvenUp">
@@ -10,19 +9,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EvenUp - Home</title>
-
+    
     <!-- Bulma CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.9.4/css/bulma.min.css">
-
+    
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
+    
     <!-- Google Fonts - Lexend -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap"
-        rel="stylesheet">
-
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#4DF7EC">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -32,12 +30,12 @@
 </head>
 
 <body>
-    <!-- Navbar -->
+    <!-- Navigation -->
     <nav class="navbar" role="navigation" aria-label="main navigation">
         <div class="container">
             <div class="navbar-brand">
                 <a class="navbar-item" href="./index.html">
-                    <img src="./media/evenup.png" alt="EvenUp icon image">
+                    <img src="./media/evenup.png" alt="EvenUp icon image" class="navbar-logo">
                     <strong>EVEN UP</strong>
                 </a>
 
@@ -85,20 +83,15 @@
                         <div class="hero-content">
                             <h1 class="hero-title">EVEN UP</h1>
                             <div class="hero-subtitle">
-                                <h2 class="title is-4 has-text-grey-dark mb-4">INTRODUCTION</h2>
-                                <p>Even Up makes it easy for friends to split expenses fairly. Whether it’s dinner, a
-                                    trip, or any shared activity, our platform helps you track contributions and settle
-                                    balances effortlessly. No more awkward money talks—just simple, transparent, and
-                                    stress-free sharing. Start organizing your group expenses today and keep everything
-                                    balanced with Even Up!</p>
+                                <p>Even Up makes it easy for friends to split expenses fairly. Whether it's dinner, a trip, or any shared activity, our platform helps you track contributions and settle balances effortlessly. No more awkward money talks — just simple, transparent, and stress-free sharing. Start organizing your group expenses today and keep everything balanced with Even Up!</p>
                             </div>
 
                             <div class="button-group is-flex is-align-items-center">
                                 <a class="button cta-button is-large" href="./signup.html">
                                     SIGN UP
                                 </a>
-                                <button class="button arrow-button" href="./signup.html">
-                                    <a class="fas fa-arrow-right" href="./signup.html"></a>
+                                <button class="button arrow-button" onclick="window.location.href='./signup.html'">
+                                    <i class="fas fa-arrow-right"></i>
                                 </button>
                             </div>
                         </div>
@@ -122,5 +115,4 @@
 
     <script src="./js/main.js"></script>
 </body>
-
 </html>

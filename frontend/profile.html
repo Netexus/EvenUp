@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="apple-mobile-web-app-title" content="EvenUp">
+    <meta name="application-name" content="EvenUp">
+    <link rel="apple-touch-icon" sizes="192x192" href="./media/icons/evenup-192x192.png">
+    <script src="./js/pwa.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EvenUp - Profile</title>
+    
+    <!-- Bulma CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.9.4/css/bulma.min.css">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts - Lexend -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#4DF7EC">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="stylesheet" href="./css/styles.css">
+    <link rel="shortcut icon" href="./media/icons/evenup.ico" type="image/x-icon">
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav class="navbar" role="navigation" aria-label="main navigation">
+        <div class="container">
+            <div class="navbar-brand">
+                <a class="navbar-item">
+                    <img src="./media/evenup.png" alt="EvenUp icon image" class="navbar-logo">
+                    <strong>EVEN UP</strong>
+                </a>
+            </div>
+
+            <div class="nav-actions">
+                <a href="./dashboard.html" class="back-button">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Back</span>
+                </a>
+                <div class="user-avatar" title="User Profile">
+                    U
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Theme Toggle Button -->
+    <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+        <i class="fas fa-sun icon sun-icon"></i>
+        <i class="fas fa-moon icon moon-icon"></i>
+    </button>
+
+    <!-- Profile Section -->
+    <section class="profile-section">
+        <div class="profile-container">
+            <h1 class="page-title">YOUR PROFILE</h1>
+
+            <div class="profile-grid">
+                <!-- Left Column -->
+                <div class="profile-card">
+                    <div class="profile-picture-section">
+                        <div class="profile-picture" onclick="uploadProfilePicture()">
+                            U
+                        </div>
+                        <div class="camera-icon" onclick="uploadProfilePicture()">
+                            <i class="fas fa-camera"></i>
+                        </div>
+                    </div>
+
+                    <div class="profile-item">
+                        <div class="item-content">
+                            <div class="item-icon">
+                                <i class="fas fa-lock"></i>
+                            </div>
+                            <div class="item-info">
+                                <div class="item-label">Password</div>
+                                <div class="item-value">Enter your secure password</div>
+                            </div>
+                        </div>
+                        <button class="edit-button" onclick="editPassword()">Edit</button>
+                    </div>
+
+                    <div class="profile-item">
+                        <div class="item-content">
+                            <div class="item-icon">
+                                <i class="fas fa-envelope"></i>
+                            </div>
+                            <div class="item-info">
+                                <div class="item-label">Email</div>
+                                <div class="item-value">user@example.com</div>
+                            </div>
+                        </div>
+                        <button class="edit-button" onclick="editEmail()">Edit</button>
+                    </div>
+                </div>
+
+                <!-- Right Column -->
+                <div class="profile-card">
+                    <div class="profile-item">
+                        <div class="item-content">
+                            <div class="item-icon">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div class="item-info">
+                                <div class="item-label">Full Name</div>
+                                <div class="item-value">John Doe</div>
+                            </div>
+                        </div>
+                        <button class="edit-button" onclick="editFullName()">Edit</button>
+                    </div>
+
+                    <div class="profile-item">
+                        <div class="item-content">
+                            <div class="item-icon">
+                                <i class="fas fa-phone"></i>
+                            </div>
+                            <div class="item-info">
+                                <div class="item-label">Phone Number</div>
+                                <div class="item-value">+57 123 456 7890</div>
+                            </div>
+                        </div>
+                        <button class="edit-button" onclick="editPhoneNumber()">Edit</button>
+                    </div>
+
+                    <div class="profile-item">
+                        <div class="item-content">
+                            <div class="item-icon">
+                                <i class="fas fa-calendar"></i>
+                            </div>
+                            <div class="item-info">
+                                <div class="item-label">Birth Date</div>
+                                <div class="item-value">November 9, 2001</div>
+                            </div>
+                        </div>
+                        <button class="edit-button" onclick="editBirthDate()">Edit</button>
+                    </div>
+
+                    <div class="profile-item">
+                        <div class="item-content">
+                            <div class="item-icon">
+                                <i class="fas fa-at"></i>
+                            </div>
+                            <div class="item-info">
+                                <div class="item-label">Username</div>
+                                <div class="item-value">pegasso-admin</div>
+                            </div>
+                        </div>
+                        <button class="edit-button" onclick="editUsername()">Edit</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <script src="./js/main.js"></script>
+</body>
+</html>
