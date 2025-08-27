@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const { getById } = require('./user.model');
 
 const ExpenseGroup = {
   async getAll() {
@@ -6,11 +7,56 @@ const ExpenseGroup = {
     return rows;
   },
 
-  async create(data) {
-    const { group_name, created_by, origin, destination, departure, trip_return, income_1, income_2, category } = data;
+  async getById(id) {
+    const [rows] = await pool.query('SELECT * FROM expense_groups WHERE group_id = ?', [id]);
+    return rows[0];
+  },
+
+  async getGroupDetails(id) {
+    const [rows] = await pool.query(
+      `SELECT 
+        eg.group_id,
+        eg.group_name,
+        COUNT(DISTINCT gm.user_id) AS num_members,
+        IFNULL(SUM(e.amount), 0) AS total_spent,
+        IFNULL(ub.net, 0) AS user_balance
+      FROM expense_groups eg
+      LEFT JOIN group_memberships gm ON eg.group_id = gm.group_id
+      LEFT JOIN expenses e ON eg.group_id = e.group_id
+      LEFT JOIN user_balances ub 
+          ON eg.group_id = ub.group_id AND ub.user_id = ?
+      GROUP BY eg.group_id, eg.group_name, ub.net
+      ORDER BY eg.group_name;`,
+      [id]
+    );
+    return rows;
+  },
+
+  async createTrip(data) {
+    const { group_name, created_by, origin, destination, departure, trip_return } = data;
     const [result] = await pool.query(
-      'INSERT INTO expense_groups (group_name, created_by, origin, destination, departure, trip_return, income_1, income_2, category) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [group_name, created_by, origin, destination, departure, trip_return, income_1, income_2, category]
+      'INSERT INTO expense_groups (group_name, created_by, origin, destination, departure, trip_return) VALUES (?, ?, ?, ?, ?, ?)',
+      [group_name, created_by, origin, destination, departure, trip_return]
+    );
+    const [rows] = await pool.query('SELECT * FROM expense_groups WHERE group_id = ?', [result.insertId]);
+    return rows[0];
+  },
+
+  async createRelationship(data) {
+    const { group_name, created_by, income_1, income_2 } = data;
+    const [result] = await pool.query(
+      'INSERT INTO expense_groups (group_name, created_by, income_1, income_2) VALUES (?, ?, ?, ?)',
+      [group_name, created_by, income_1, income_2]
+    );
+    const [rows] = await pool.query('SELECT * FROM expense_groups WHERE group_id = ?', [result.insertId]);
+    return rows[0];
+  },
+
+  async createOther(data) {
+    const { group_name, created_by } = data;
+    const [result] = await pool.query(
+      'INSERT INTO expense_groups (group_name, created_by) VALUES (?, ?)',
+      [group_name, created_by]
     );
     const [rows] = await pool.query('SELECT * FROM expense_groups WHERE group_id = ?', [result.insertId]);
     return rows[0];
@@ -30,7 +76,9 @@ const ExpenseGroup = {
   async delete(id) {
     const [result] = await pool.query('DELETE FROM expense_groups WHERE group_id = ?', [id]);
     return result.affectedRows > 0;
-  }
+  },
+
 };
+
 
 module.exports = ExpenseGroup;
