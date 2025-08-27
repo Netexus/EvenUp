@@ -8,7 +8,7 @@
     <script src="./js/pwa.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EvenUp - Sign In</title>
+    <title>EvenUp - Sign Up</title>
     
     <!-- Bulma CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.9.4/css/bulma.min.css">
@@ -49,8 +49,8 @@
                 <div class="navbar-end">
                     <div class="navbar-item">
                         <div class="buttons">
-                            <a class="button is-primary" href="./signup.html">
-                                <strong>Sign Up</strong>
+                            <a class="button is-primary" href="./login.html">
+                                <strong>Log In</strong>
                             </a>
                         </div>
                     </div>
@@ -65,18 +65,34 @@
         <i class="fas fa-moon icon moon-icon"></i>
     </button>
 
-    <!-- Sign In Section -->
-    <section class="signin-section">
-        <div class="login-card">
-            <div class="login-title">
-                <h1>LOGIN</h1>
+    <!-- Sign Up Section -->
+    <section class="signup-section">
+        <div class="signup-card">
+            <div class="signup-title">
+                <h1>SIGN UP</h1>
             </div>
 
-            <form id="loginForm">
+            <form id="signupForm">
+                <div class="field">
+                    <label for="email">Email</label>
+                    <div class="input-container">
+                        <i class="fas fa-envelope input-icon"></i>
+                        <input class="input" type="email" id="email" name="email" placeholder="johndoe@example.com" required />
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label for="fullName">Full Name</label>
+                    <div class="input-container">
+                        <i class="fas fa-user input-icon"></i>
+                        <input class="input" type="text" id="fullName" name="fullName" placeholder="John Doe" required />
+                    </div>
+                </div>
+
                 <div class="field">
                     <label for="username">Username</label>
                     <div class="input-container">
-                        <i class="fas fa-user input-icon"></i>
+                        <i class="fas fa-at input-icon"></i>
                         <input class="input" type="text" id="username" name="username" placeholder="pegasso-admin" required />
                     </div>
                 </div>
@@ -89,17 +105,35 @@
                     </div>
                 </div>
 
-                <button type="submit" class="button login-button">
-                    LOGIN
+                <div class="columns-container">
+                    <div class="field">
+                        <label for="birthDate">Birth Date</label>
+                        <div class="input-container">
+                            <i class="fas fa-calendar input-icon"></i>
+                            <input class="input" type="date" id="birthDate" name="birthDate" required />
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label for="phoneNumber">Phone Number</label>
+                        <div class="input-container">
+                            <i class="fas fa-phone input-icon"></i>
+                            <input class="input" type="tel" id="phoneNumber" name="phoneNumber" placeholder="+57 123 456 7890" required />
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="button signup-button">
+                    REGISTER
                 </button>
             </form>
 
-            <div class="login-links">
-                <a href="#forgot">Forgot your password?</a>
+            <div class="signup-links">
+                <span>Already have an account?</span>
+                <a href="./login.html">Sign In</a>
             </div>
         </div>
     </section>
-
     <script src="./js/main.js"></script>
 </body>
 </html>
