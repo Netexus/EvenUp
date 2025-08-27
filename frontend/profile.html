@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <link rel="manifest" href="/manifest.json">
     <meta name="apple-mobile-web-app-title" content="EvenUp">
@@ -9,18 +10,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EvenUp - Profile</title>
-    
+
     <!-- Bulma CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.9.4/css/bulma.min.css">
-    
+
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <!-- Google Fonts - Lexend -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#4DF7EC">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -34,7 +36,7 @@
     <nav class="navbar" role="navigation" aria-label="main navigation">
         <div class="container">
             <div class="navbar-brand">
-                <a class="navbar-item">
+                <a class="navbar-item" href="./index.html">
                     <img src="./media/evenup.png" alt="EvenUp icon image" class="navbar-logo">
                     <strong>EVEN UP</strong>
                 </a>
@@ -45,8 +47,18 @@
                     <i class="fas fa-arrow-left"></i>
                     <span>Back</span>
                 </a>
-                <div class="user-avatar" title="User Profile">
+                <div class="user-avatar" onclick="toggleAvatarDropdown()" title="User Profile">
                     U
+                    <div class="avatar-dropdown" id="avatarDropdown">
+                        <a href="./profile.html" class="dropdown-item" onclick="editProfile()">
+                            <i class="fas fa-edit"></i>
+                            <span>Edit</span>
+                        </a>
+                        <a href="./dashboard.html" class="dropdown-item">
+                            <i class="fas fa-tachometer-alt"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -113,7 +125,7 @@
                         </div>
                         <button class="edit-button" onclick="editUsername()">Edit</button>
                     </div>
-                    
+
                     <div class="profile-item">
                         <div class="item-content">
                             <div class="item-icon">
@@ -126,10 +138,35 @@
                         </div>
                         <button class="edit-button" onclick="editPhoneNumber()">Edit</button>
                     </div>
+
+                    <div class="profile-item">
+                        <div class="item-content">
+                            <div class="item-icon">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div class="item-info">
+                                <div class="item-label">Full Name</div>
+                                <div class="item-value">John Doe</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="profile-item">
+                        <div class="item-content">
+                            <div class="item-icon">
+                                <i class="fas fa-calendar"></i>
+                            </div>
+                            <div class="item-info">
+                                <div class="item-label">Birth Date</div>
+                                <div class="item-value">November 9, 2001</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
     <script src="./js/main.js"></script>
 </body>
+
 </html>

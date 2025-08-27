@@ -378,3 +378,59 @@ document.addEventListener('DOMContentLoaded', () => {
     registerServiceWorker();
     initializePWAPrompt();
 });
+
+// Add these functions to your main.js file
+
+// Toggle avatar dropdown menu
+function toggleAvatarDropdown() {
+    const dropdown = document.getElementById('avatarDropdown');
+    dropdown.classList.toggle('active');
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(event) {
+    const avatar = document.querySelector('.user-avatar');
+    const dropdown = document.getElementById('avatarDropdown');
+    
+    if (dropdown && avatar) {
+        if (!avatar.contains(event.target)) {
+            dropdown.classList.remove('active');
+        }
+    }
+});
+
+// Edit profile function
+function editProfile() {
+    // Close dropdown first
+    document.getElementById('avatarDropdown').classList.remove('active');
+    
+    // Add your edit profile logic here
+    console.log('Edit profile clicked');
+    // For example, you could redirect to an edit page or open a modal
+}
+
+// Existing profile functions (if you don't have them already)
+function uploadProfilePicture() {
+    console.log('Upload profile picture');
+    // Add file upload logic here
+}
+
+function editPassword() {
+    console.log('Edit password');
+    // Add password edit logic here
+}
+
+function editEmail() {
+    console.log('Edit email');
+    // Add email edit logic here
+}
+
+function editUsername() {
+    console.log('Edit username');
+    // Add username edit logic here
+}
+
+function editPhoneNumber() {
+    console.log('Edit phone number');
+    // Add phone number edit logic here
+}
