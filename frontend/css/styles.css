@@ -927,3 +927,26 @@ body {
         height: 50px;
     }
 }
+
+@media screen and (max-width: 768px) {
+    .columns-container {
+        display: block;
+        grid-template-columns: none;
+        gap: 0;
+    }
+    
+    .columns-container .field {
+        margin-bottom: 1.25rem;
+        width: 100%;
+    }
+    
+    .signup-card .input-container {
+        width: 100%;
+        display: block;
+    }
+    
+    .signup-card .input {
+        width: 100%;
+        box-sizing: border-box;
+    }
+}
