@@ -7,20 +7,20 @@ const ExpenseGroup = {
   },
 
   async create(data) {
-    const { group_name, created_by, origin, destination, departure, trip_return, income_1, income_2} = data;
+    const { group_name, created_by, origin, destination, departure, trip_return, income_1, income_2, category } = data;
     const [result] = await pool.query(
-      'INSERT INTO expense_groups (group_name, created_by, origin, destination, departure, trip_return, income_1, income_2) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [group_name, created_by, origin, destination, departure, trip_return, income_1, income_2]
+      'INSERT INTO expense_groups (group_name, created_by, origin, destination, departure, trip_return, income_1, income_2, category) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [group_name, created_by, origin, destination, departure, trip_return, income_1, income_2, category]
     );
     const [rows] = await pool.query('SELECT * FROM expense_groups WHERE group_id = ?', [result.insertId]);
     return rows[0];
   },
 
   async update(id, data) {
-    const { group_name, origin, destination, departure, trip_return, income_1, income_2 } = data;
+    const { group_name, origin, destination, departure, trip_return, income_1, income_2, category } = data;
     const [result] = await pool.query(
-      'UPDATE expense_groups SET group_name = ?, origin = ?, destination = ?, departure = ?, trip_return = ?, income_1 = ?, income_2 = ? WHERE group_id = ?',
-      [group_name, origin, destination, departure, trip_return, income_1, income_2, id]
+      'UPDATE expense_groups SET group_name = ?, origin = ?, destination = ?, departure = ?, trip_return = ?, income_1 = ?, income_2 = ?, category = ? WHERE group_id = ?',
+      [group_name, origin, destination, departure, trip_return, income_1, income_2, category, id]
     );
     if (result.affectedRows === 0) return null;
     const [rows] = await pool.query('SELECT * FROM expense_groups WHERE group_id = ?', [id]);
