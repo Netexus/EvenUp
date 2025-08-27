@@ -25,6 +25,7 @@ CREATE TABLE `expense_groups` (
   `trip_return` DATE,
   `income_1` INT,
   `income_2` INT,
+  `category` ENUM('trip','relationship', 'other') NOT NULL DEFAULT 'other',
   `status` ENUM('active','inactive') NOT NULL DEFAULT 'active',
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_groups_created_by FOREIGN KEY (`created_by`)
@@ -50,6 +51,7 @@ CREATE TABLE `group_memberships` (
 -- Expenses (expenses)
 CREATE TABLE `expenses` (
   `expense_id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `expense_name` VARCHAR (150) NOT NULL,
   `group_id` INT UNSIGNED NULL,
   `paid_by` INT UNSIGNED NOT NULL,
   `amount` DECIMAL(12,2) NOT NULL,
