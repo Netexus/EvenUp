@@ -1,3 +1,64 @@
+// Authentication Management
+const Auth = {
+    async login(username, password) {
+        try {
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username, password })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Login failed');
+            }
+
+            const data = await response.json();
+            
+            // Guardar token si tu backend lo envía
+            if (data.token) {
+                localStorage.setItem('authToken', data.token);
+            }
+            
+            return data;
+        } catch (error) {
+            throw error;
+        }
+    },
+
+    async register(formData) {
+        try {
+            const response = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Registration failed');
+            }
+
+            return await response.json();
+        } catch (error) {
+            throw error;
+        }
+    },
+
+    async logout() {
+        localStorage.removeItem('authToken');
+        window.location.href = './login.html';
+    },
+
+    isAuthenticated() {
+        return localStorage.getItem('authToken') !== null;
+    }
+};
+
 // Theme Management
 function initializeTheme() {
     const savedTheme = localStorage.getItem('theme') || 'light';
@@ -193,7 +254,7 @@ function initializeForms() {
     }
 }
 
-function handleLoginSubmit(e) {
+async function handleLoginSubmit(e) {
     e.preventDefault();
 
     const username = document.getElementById('username').value;
@@ -215,11 +276,16 @@ function handleLoginSubmit(e) {
         return;
     }
 
-    showNotification('Login successful!', 'success');
-    // Redirect to dashboard or handle login logic here
+    try {
+        await Auth.login(username, password);
+        showNotification('Login successful!', 'success');
+        window.location.href = './dashboard.html';
+    } catch (error) {
+        showNotification(error.message || 'Login failed', 'error');
+    }
 }
 
-function handleSignupSubmit(e) {
+async function handleSignupSubmit(e) {
     e.preventDefault();
 
     const formData = {
@@ -252,8 +318,15 @@ function handleSignupSubmit(e) {
         return;
     }
 
-    showNotification('Account created successfully!', 'success');
-    // Redirect to login or handle signup logic here
+    try {
+        await Auth.register(formData);
+        showNotification('Account created successfully!', 'success');
+        setTimeout(() => {
+            window.location.href = './login.html';
+        }, 1500);
+    } catch (error) {
+        showNotification(error.message || 'Registration failed', 'error');
+    }
 }
 
 function isValidEmail(email) {
@@ -378,59 +451,3 @@ document.addEventListener('DOMContentLoaded', () => {
     registerServiceWorker();
     initializePWAPrompt();
 });
-
-// Add these functions to your main.js file
-
-// Toggle avatar dropdown menu
-function toggleAvatarDropdown() {
-    const dropdown = document.getElementById('avatarDropdown');
-    dropdown.classList.toggle('active');
-}
-
-// Close dropdown when clicking outside
-document.addEventListener('click', function(event) {
-    const avatar = document.querySelector('.user-avatar');
-    const dropdown = document.getElementById('avatarDropdown');
-    
-    if (dropdown && avatar) {
-        if (!avatar.contains(event.target)) {
-            dropdown.classList.remove('active');
-        }
-    }
-});
-
-// Edit profile function
-function editProfile() {
-    // Close dropdown first
-    document.getElementById('avatarDropdown').classList.remove('active');
-    
-    // Add your edit profile logic here
-    console.log('Edit profile clicked');
-    // For example, you could redirect to an edit page or open a modal
-}
-
-// Existing profile functions (if you don't have them already)
-function uploadProfilePicture() {
-    console.log('Upload profile picture');
-    // Add file upload logic here
-}
-
-function editPassword() {
-    console.log('Edit password');
-    // Add password edit logic here
-}
-
-function editEmail() {
-    console.log('Edit email');
-    // Add email edit logic here
-}
-
-function editUsername() {
-    console.log('Edit username');
-    // Add username edit logic here
-}
-
-function editPhoneNumber() {
-    console.log('Edit phone number');
-    // Add phone number edit logic here
-}

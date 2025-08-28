@@ -5,6 +5,7 @@ const settlementRoutes = require('./routes/settlement.routes');
 const expenseGroupRoutes = require('./routes/expenseGroup.routes');
 const userRoutes = require('./routes/user.routes');
 const expenseRoutes = require('./routes/expense.routes');
+const authRoutes = require('./routes/auth.routes');
 
 // Initialize Express app
 const app = express();
@@ -14,7 +15,15 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+// Serve static files from the frontend directory
+app.use(express.static('../frontend'));
+// Serve index.html for any unmatched frontend routes
+app.get(['/', '/index.html', '/dashboard.html', '/groups.html', '/expenses.html', '/settlements.html', '/profile.html', '/login.html', '/signup.html'], (req, res) => {
+    res.sendFile(req.path === '/' ? 'index.html' : req.path, { root: '../frontend' });
+});
+
 // API Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/settlements', settlementRoutes);
 app.use('/api/expense_groups', expenseGroupRoutes);
 app.use('/api/users', userRoutes);
