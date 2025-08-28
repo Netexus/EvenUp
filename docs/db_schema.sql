@@ -25,6 +25,7 @@ CREATE TABLE `expense_groups` (
   `trip_return` DATE,
   `income_1` INT,
   `income_2` INT,
+  `birthdate` DATE NOT NULL,
   `category` ENUM('trip','relationship', 'other') NOT NULL DEFAULT 'other',
   `status` ENUM('active','inactive') NOT NULL DEFAULT 'active',
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

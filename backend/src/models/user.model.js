@@ -9,17 +9,17 @@ module.exports = {
     },
 
     getAll: (callback) => {
-        const sql = 'SELECT user_id, name, username, phone, email, created_at FROM app_users';
+        const sql = 'SELECT user_id, name, username, phone, email, birthdate, created_at FROM app_users';
         db.query(sql, callback);
     },
 
     getProfile: (id, callback) => {
-        const sql = 'SELECT name,username,phone,email,password_hash FROM app_users WHERE user_id = ?';
+        const sql = 'SELECT name, username, phone, email, password_hash, birthdate FROM app_users WHERE user_id = ?';
         db.query(sql, id, callback);
     },
 
     getById: (id, callback) => {
-        const sql = 'SELECT user_id, name, username, phone, email, created_at FROM app_users WHERE user_id = ?';
+        const sql = 'SELECT user_id, name, username, phone, email, birthdate, created_at FROM app_users WHERE user_id = ?';
         db.query(sql, id, callback);
     },
 
