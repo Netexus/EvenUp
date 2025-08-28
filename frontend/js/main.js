@@ -1,13 +1,3 @@
-/**
- * Main JavaScript file for EvenUp
- * Handles theme management, navigation, forms, and UI interactions
- * PWA functionality is handled separately in pwa.js
- */
-
-// ========================================
-// THEME MANAGEMENT
-// ========================================
-
 function initializeTheme() {
     const savedTheme = localStorage.getItem('theme') || 'light';
     document.documentElement.setAttribute('data-theme', savedTheme);
@@ -101,7 +91,7 @@ function initializeForms() {
     }
 }
 
-function handleLoginSubmit(e) {
+async function handleLoginSubmit(e) {
     e.preventDefault();
 
     const username = document.getElementById('username').value;
@@ -122,11 +112,16 @@ function handleLoginSubmit(e) {
         return;
     }
 
-    showNotification('Login successful!', 'success');
-    // Redirect to dashboard or handle login logic here
+    try {
+        await Auth.login(username, password);
+        showNotification('Login successful!', 'success');
+        window.location.href = './dashboard.html';
+    } catch (error) {
+        showNotification(error.message || 'Login failed', 'error');
+    }
 }
 
-function handleSignupSubmit(e) {
+async function handleSignupSubmit(e) {
     e.preventDefault();
 
     const formData = {
@@ -160,8 +155,15 @@ function handleSignupSubmit(e) {
         return;
     }
 
-    showNotification('Account created successfully!', 'success');
-    // Redirect to login or handle signup logic here
+    try {
+        await Auth.register(formData);
+        showNotification('Account created successfully!', 'success');
+        setTimeout(() => {
+            window.location.href = './login.html';
+        }, 1500);
+    } catch (error) {
+        showNotification(error.message || 'Registration failed', 'error');
+    }
 }
 
 function isValidEmail(email) {
@@ -300,41 +302,6 @@ function showEditModal(fieldName, inputType, currentValue) {
         document.getElementById('editInput').focus();
     }, 100);
 }
-
-// ========================================
-// AVATAR DROPDOWN MANAGEMENT
-// ========================================
-
-function toggleAvatarDropdown() {
-    const dropdown = document.getElementById('avatarDropdown');
-    if (dropdown) {
-        dropdown.classList.toggle('active');
-    }
-}
-
-function editProfile() {
-    const dropdown = document.getElementById('avatarDropdown');
-    if (dropdown) {
-        dropdown.classList.remove('active');
-    }
-    console.log('Edit profile clicked');
-}
-
-// Close dropdown when clicking outside
-document.addEventListener('click', function (event) {
-    const avatar = document.querySelector('.user-avatar');
-    const dropdown = document.getElementById('avatarDropdown');
-
-    if (dropdown && avatar) {
-        if (!avatar.contains(event.target)) {
-            dropdown.classList.remove('active');
-        }
-    }
-});
-
-// ========================================
-// INITIALIZATION
-// ========================================
 
 document.addEventListener('DOMContentLoaded', () => {
     initializeTheme();
