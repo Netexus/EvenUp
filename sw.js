@@ -1,31 +1,32 @@
+/**
+ * Service Worker for EvenUp PWA
+ * Handles caching, offline functionality, and background sync
+ */
+
 const CACHE_NAME = 'evenup-v1.0.0';
 const urlsToCache = [
-    // '/',
-    '/frontend/index.html',
-    '/frontend/login.html',
-    '/frontend/signup.html',
-    '/frontend/balances.html',
-    '/frontend/dashboard.html',
-    '/frontend/ui.html',
-    '/frontend/css/styles.css',
-    '/frontend/css/theme.css',
-    '/frontend/js/main.js',
-    '/frontend/js/auth.js',
-    '/frontend/js/balances.js',
-    '/frontend/js/expenses.js',
-    '/frontend/media/icons/evenup.ico',
-    '/frontend/media/evenup.png',
-    '/frontend/media/hero_image.jpg',
-    // PWA Icons
-    '/frontend/media/icons/evenup-192x192.png',
-    '/frontend/media/icons/evenup-512x512.png',
-    // CDN resources
+    './frontend/index.html',
+    './frontend/login.html',
+    './frontend/signup.html',
+    './frontend/profile.html',
+    './frontend/dashboard.html',
+    './frontend/css/styles.css',
+    './frontend/js/main.js',
+    './frontend/js/pwa.js',
+    './frontend/media/icons/evenup.ico',
+    './frontend/media/evenup.png',
+    './frontend/media/hero_image.jpg',
+    './frontend/media/icons/evenup-192x192.png',
+    './frontend/media/icons/evenup-512x512.png',
     'https://cdnjs.cloudflare.com/ajax/libs/bulma/0.9.4/css/bulma.min.css',
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
     'https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap'
 ];
 
-// Install event - Cache resources
+// ========================================
+// INSTALL EVENT
+// ========================================
+
 self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME)
@@ -35,12 +36,18 @@ self.addEventListener('install', event => {
             })
             .then(() => {
                 console.log('All resources cached');
-                return self.skipWaiting(); // Force activate new SW
+                return self.skipWaiting();
+            })
+            .catch(error => {
+                console.error('Cache installation failed:', error);
             })
     );
 });
 
-// Activate event - Clean old caches
+// ========================================
+// ACTIVATE EVENT
+// ========================================
+
 self.addEventListener('activate', event => {
     event.waitUntil(
         caches.keys().then(cacheNames => {
@@ -54,24 +61,28 @@ self.addEventListener('activate', event => {
             );
         }).then(() => {
             console.log('Cache cleanup complete');
-            return self.clients.claim(); // Take control of all pages
+            return self.clients.claim();
         })
     );
 });
 
-// Fetch event - Serve from cache, fallback to network
+// ========================================
+// FETCH EVENT
+// ========================================
+
 self.addEventListener('fetch', event => {
     event.respondWith(
         caches.match(event.request)
             .then(response => {
-                // Return cached version or fetch from network
-                return response || fetch(event.request).then(fetchResponse => {
-                    // Don't cache non-successful responses
+                if (response) {
+                    return response;
+                }
+
+                return fetch(event.request).then(fetchResponse => {
                     if (!fetchResponse || fetchResponse.status !== 200 || fetchResponse.type !== 'basic') {
                         return fetchResponse;
                     }
 
-                    // Clone the response as it can only be consumed once
                     const responseToCache = fetchResponse.clone();
 
                     caches.open(CACHE_NAME)
@@ -83,15 +94,17 @@ self.addEventListener('fetch', event => {
                 });
             })
             .catch(() => {
-                // Offline fallback for HTML pages
                 if (event.request.destination === 'document') {
-                    return caches.match('/frontend/index.html');
+                    return caches.match('./index.html');
                 }
             })
     );
 });
 
-// Background sync for offline actions (optional)
+// ========================================
+// BACKGROUND SYNC
+// ========================================
+
 self.addEventListener('sync', event => {
     if (event.tag === 'background-sync') {
         event.waitUntil(doBackgroundSync());
@@ -99,6 +112,6 @@ self.addEventListener('sync', event => {
 });
 
 function doBackgroundSync() {
-    // Handle offline actions when connection is restored
     console.log('Background sync triggered');
+    // Handle offline actions when connection is restored
 }
