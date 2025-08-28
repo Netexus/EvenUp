@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const db = require('../config/database');
+const User = require('../models/user.model');
 
 // Create a new user
 exports.createUser = async (req, res) => {
@@ -26,20 +27,11 @@ exports.createUser = async (req, res) => {
         // Hash the password
         const salt = await bcrypt.genSalt(10);
         const password_hash = await bcrypt.hash(password, salt);
+        req.body.password = password_hash;
 
         // Insert new user
-        const [result] = await db.query(
-            'INSERT INTO app_users (name, username, phone, email, password_hash) VALUES (?, ?, ?, ?, ?)',
-            [name, username, phone, email, password_hash]
-        );
-
-        res.status(201).json({
-            user_id: result.insertId,
-            name,
-            username,
-            email,
-            message: 'User created successfully'
-        });
+        const user = await User.create(req.body);
+        res.status(201).json(user);
 
     } catch (error) {
         console.error('Error creating user:', error);
@@ -53,16 +45,10 @@ exports.createUser = async (req, res) => {
 // Get all users
 exports.getUsers = async (req, res) => {
     try {
-        const [users] = await db.query(`
-            SELECT user_id, name, username, email, phone, created_at 
-            FROM app_users 
-            ORDER BY created_at DESC
-        `);
+        const users = await User.getAll();
         res.json(users);
     } catch (error) {
-        console.error('Error getting users:', error);
-        res.status(500).json({ 
-            error: 'Error getting users',
+        res.status(500).json({ error: 'Error getting users',
             details: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     }
@@ -71,24 +57,18 @@ exports.getUsers = async (req, res) => {
 //Get user by ID
 exports.getUserById = async (req, res) => {
     try {
-        const [user] = await db.query(
-            'SELECT user_id, name, username, email, phone, created_at FROM app_users WHERE user_id = ?',
-            [req.params.id]
-        );
-
-        if (user.length === 0) {
+        const user = await User.getById(req.params.id);
+        if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
-
-        res.json(user[0]);
+        res.json(user);
     } catch (error) {
-        console.error('Error getting user:', error);
-        res.status(500).json({ 
-            error: 'Error getting user',
+        res.status(500).json({ error: 'Error getting user',
             details: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     }
 };
+
 
 //Update a user
 exports.updateUser = async (req, res) => {
@@ -156,36 +136,28 @@ exports.updateUser = async (req, res) => {
 //Delete a user
 exports.deleteUser = async (req, res) => {
     try {
-        const [result] = await db.query('DELETE FROM app_users WHERE user_id = ?', [req.params.id]);
-        
-        if (result.affectedRows === 0) {
+        const deleted = await User.remove(req.params.id);
+        if (!deleted) {
             return res.status(404).json({ error: 'User not found' });
         }
 
         res.json({ message: 'User deleted successfully' });
     } catch (error) {
-        console.error('Error deleting user:', error);
-        res.status(500).json({ 
-            error: 'Error deleting user',
+        res.status(500).json({ error: 'Error deleting user',
             details: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     }
 };
 
 // Get profile information
-
 exports.getProfile = async (req, res) => {
     try {
-        const [user] = await db.query(
-            'SELECT user_id, name, username, email, phone, created_at FROM app_users WHERE user_id = ?',
-            [req.user.id]
-        );
+        const user = await User.getProfile(req.user.id);
 
-        if (user.length === 0) {
+        if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
-
-        res.json(user[0]);
+        res.json(user);
     } catch (error) {
         console.error('Error getting user profile:', error);
         res.status(500).json({ 
