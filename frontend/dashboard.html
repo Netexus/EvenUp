@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="apple-mobile-web-app-title" content="EvenUp">
+    <meta name="application-name" content="EvenUp">
+    <link rel="apple-touch-icon" sizes="192x192" href="./media/icons/evenup-192x192.png">
+    <meta name="theme-color" content="#4DF7EC">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <!-- Basic Meta -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EvenUp - Dashboard</title>
+
+    <!-- External Stylesheets -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.9.4/css/bulma.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="./css/styles.css">
+    <link rel="shortcut icon" href="./media/evenup.png" type="image/x-icon">
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav class="navbar" role="navigation" aria-label="main navigation">
+        <div class="container">
+            <div class="navbar-brand">
+                <a class="navbar-item" href="./index.html">
+                    <img src="./media/evenup.png" alt="EvenUp icon image" class="navbar-logo">
+                    <strong>EVEN UP</strong>
+                </a>
+            </div>
+
+            <div class="nav-actions">
+                <a href="./dashboard.html" class="back-button">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Log Out</span>
+                </a>
+                <div class="user-avatar" onclick="toggleAvatarDropdown()" title="User Profile">
+                    U
+                    <div class="avatar-dropdown" id="avatarDropdown">
+                        <a href="./profile.html" class="dropdown-item">
+                            <i class="fas fa-edit"></i>
+                            <span>Edit Profile</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Theme Toggle Button -->
+    <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+        <i class="fas fa-sun icon sun-icon"></i>
+        <i class="fas fa-moon icon moon-icon"></i>
+    </button>
+
+    <!-- Groups Section -->
+    <section class="groups-section" id="groupsSection">
+        <div class="groups-container">
+            <h1 class="page-title">YOUR GROUPS</h1>
+
+            <div class="groups-grid" id="groupsGrid">
+                <!-- Add New Group Card -->
+                <div class="add-group-card" onclick="showCreateGroupModal()">
+                    <div class="add-group-icon">
+                        <i class="fas fa-plus"></i>
+                    </div>
+                    <div class="add-group-text">Create New Group</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Group Details Section (Hidden by default) -->
+    <section class="group-details-section is-hidden" id="groupDetailsSection">
+        <div class="group-details-container">
+            <div class="back-button-container">
+                <button class="back-button" onclick="showDashboard()">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Back to Groups</span>
+                </button>
+            </div>
+            
+            <div class="group-details-header">
+                <div class="group-details-avatar" id="groupDetailsAvatar"></div>
+                <div class="group-details-info">
+                    <h1 class="group-name" id="groupNameTitle"></h1>
+                    <p class="group-members" id="groupMembers"></p>
+                </div>
+            </div>
+
+            <div class="group-stats-summary" id="groupStatsSummary">
+                <div class="stat-item">
+                    <span class="stat-value" id="totalExpenses"></span>
+                    <span class="stat-label">Total Expenses</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value" id="youOwe"></span>
+                    <span class="stat-label">You Owe</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value" id="youAreOwed"></span>
+                    <span class="stat-label">You're Owed</span>
+                </div>
+            </div>
+
+            <div class="group-actions">
+                <button class="button is-primary is-medium" onclick="showAddPaymentModal()">
+                    <i class="fas fa-exchange-alt"></i>
+                    <span>Add Payments</span>
+                </button>
+                <button class="button is-primary is-medium" onclick="showAddExpenseModal()">
+                    <i class="fas fa-plus"></i>
+                    <span>Add Expenses</span>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Create Group Modal -->
+    <div id="createGroupModal" class="modal">
+        <div class="modal-background"></div>
+        <div class="modal-card">
+            <header class="modal-card-head">
+                <p class="modal-card-title">Create New Group</p>
+                <button class="delete" aria-label="close" onclick="closeCreateGroupModal()"></button>
+            </header>
+            <section class="modal-card-body">
+                <form id="createGroupForm">
+                    <div class="field">
+                        <label class="label">Group Name</label>
+                        <div class="control">
+                            <input class="input" type="text" id="groupName" placeholder="e.g., Weekend Trip" required>
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label class="label">Category</label>
+                        <div class="control">
+                            <div class="select is-fullwidth">
+                                <select id="groupCategory">
+                                    <option value="other">Other</option>
+                                    <option value="relationship">Relationship</option>
+                                    <option value="trip">Trip</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic form section based on category -->
+                    <div id="dynamicFormSection"></div>
+
+                    <div class="field mt-4">
+                        <label class="label">Add Members</label>
+                        <div class="control">
+                            <div class="tags are-medium" id="memberTags">
+                                <span class="tag is-primary">
+                                    You
+                                    <button class="delete is-small"></button>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="control mt-2">
+                            <input class="input is-primary" type="text" id="addMemberInput" placeholder="Enter member email or username">
+                        </div>
+                        <p class="help">Press Enter to add a member</p>
+                    </div>
+                </form>
+            </section>
+            <footer class="modal-card-foot">
+                <button class="button is-primary" onclick="createGroup()">Create</button>
+                <button class="button" onclick="closeCreateGroupModal()">Cancel</button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Add Payment Modal -->
+    <div id="addPaymentModal" class="modal">
+        <div class="modal-background"></div>
+        <div class="modal-card">
+            <header class="modal-card-head">
+                <p class="modal-card-title">Add New Payment</p>
+                <button class="delete" aria-label="close" onclick="closeAddPaymentModal()"></button>
+            </header>
+            <section class="modal-card-body">
+                <form id="addPaymentForm">
+                    <div class="field">
+                        <label class="label">From</label>
+                        <div class="control">
+                            <div class="select is-fullwidth">
+                                <select id="paymentFrom" required>
+                                    <option value="you">You</option>
+                                    <!-- Other members will be added here dynamically -->
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">To</label>
+                        <div class="control">
+                            <div class="select is-fullwidth">
+                                <select id="paymentTo" required>
+                                    <option value="you">You</option>
+                                    <!-- Other members will be added here dynamically -->
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">Amount</label>
+                        <div class="control">
+                            <input class="input" type="number" id="paymentAmount" min="0" required>
+                        </div>
+                    </div>
+                </form>
+            </section>
+            <footer class="modal-card-foot">
+                <button class="button is-primary" onclick="addPayment()">Save</button>
+                <button class="button" onclick="closeAddPaymentModal()">Cancel</button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Add Expense Modal -->
+    <div id="addExpenseModal" class="modal">
+        <div class="modal-background"></div>
+        <div class="modal-card">
+            <header class="modal-card-head">
+                <p class="modal-card-title">Add New Expense</p>
+                <button class="delete" aria-label="close" onclick="closeAddExpenseModal()"></button>
+            </header>
+            <section class="modal-card-body">
+                <form id="addExpenseForm">
+                    <div class="field">
+                        <label class="label">Expense Name</label>
+                        <div class="control">
+                            <input class="input" type="text" id="expenseName" required>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">Description</label>
+                        <div class="control">
+                            <textarea class="textarea" id="expenseDescription" rows="2"></textarea>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">Category</label>
+                        <div class="control">
+                            <input class="input" type="text" id="expenseCategory" required>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">Date</label>
+                        <div class="control">
+                            <input class="input" type="date" id="expenseDate" required>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">Amount ($)</label>
+                        <div class="control">
+                            <input class="input" type="number" id="expenseAmount" min="0" required>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">Members Involved</label>
+                        <div class="control">
+                            <div class="select is-fullwidth">
+                                <select id="expenseMembers" multiple size="4" required>
+                                    <!-- Members added dynamically -->
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">Split Method</label>
+                        <div class="control">
+                            <label class="radio">
+                                <input type="radio" name="splitMethod" value="equitable" checked>
+                                Equitable
+                            </label>
+                            <label class="radio">
+                                <input type="radio" name="splitMethod" value="percentage">
+                                Percentage
+                            </label>
+                        </div>
+                    </div>
+                    <div id="percentageSplitSection" class="field" style="display: none;">
+                        <label class="label">Split by Percentage</label>
+                        <div id="percentageInputs">
+                            <!-- Percentage inputs added dynamically -->
+                        </div>
+                    </div>
+                </form>
+            </section>
+            <footer class="modal-card-foot">
+                <button class="button is-primary" onclick="addExpense()">Save Expense</button>
+                <button class="button" onclick="closeAddExpenseModal()">Cancel</button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="./js/pwa.js"></script>
+    <script src="./js/main.js"></script>
+    <script src="./js/dashboard.js"></script>
+</body>
+</html>
