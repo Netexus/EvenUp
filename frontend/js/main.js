@@ -1,65 +1,3 @@
-// Authentication Management
-const Auth = {
-    async login(username, password) {
-        try {
-            const response = await fetch('/api/auth/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ username, password })
-            });
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.message || 'Login failed');
-            }
-
-            const data = await response.json();
-            
-            // Guardar token si tu backend lo envía
-            if (data.token) {
-                localStorage.setItem('authToken', data.token);
-            }
-            
-            return data;
-        } catch (error) {
-            throw error;
-        }
-    },
-
-    async register(formData) {
-        try {
-            const response = await fetch('/api/auth/register', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(formData)
-            });
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.message || 'Registration failed');
-            }
-
-            return await response.json();
-        } catch (error) {
-            throw error;
-        }
-    },
-
-    async logout() {
-        localStorage.removeItem('authToken');
-        window.location.href = './login.html';
-    },
-
-    isAuthenticated() {
-        return localStorage.getItem('authToken') !== null;
-    }
-};
-
-// Theme Management
 function initializeTheme() {
     const savedTheme = localStorage.getItem('theme') || 'light';
     document.documentElement.setAttribute('data-theme', savedTheme);
@@ -79,7 +17,10 @@ function toggleTheme() {
     }
 }
 
-// Navigation Management
+// ========================================
+// NAVIGATION MANAGEMENT
+// ========================================
+
 function initializeNavigation() {
     const navbarBurgers = Array.prototype.slice.call(document.querySelectorAll('.navbar-burger'), 0);
 
@@ -98,15 +39,6 @@ function initializeNavigation() {
     }
 }
 
-// Smooth Scroll Function
-function scrollToNext() {
-    window.scrollTo({
-        top: window.innerHeight,
-        behavior: 'smooth'
-    });
-}
-
-// Navbar Scroll Effect
 function initializeScrollEffects() {
     const navbar = document.querySelector('.navbar');
     if (!navbar) return;
@@ -135,112 +67,17 @@ function initializeScrollEffects() {
     });
 }
 
-// Service Worker Registration
-function registerServiceWorker() {
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/sw.js')
-                .then(registration => {
-                    console.log('Service Worker registered successfully:', registration);
-
-                    // Check for updates
-                    registration.addEventListener('updatefound', () => {
-                        const newWorker = registration.installing;
-                        if (newWorker) {
-                            newWorker.addEventListener('statechange', () => {
-                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    showUpdatePrompt();
-                                }
-                            });
-                        }
-                    });
-                })
-                .catch(error => {
-                    console.log('Service Worker registration failed:', error);
-                });
-        });
-    }
-}
-
-// PWA Install Prompt
-let deferredPrompt;
-
-function initializePWAPrompt() {
-    window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-        showInstallPrompt();
-    });
-
-    window.addEventListener('appinstalled', () => {
-        console.log('PWA was installed');
-        deferredPrompt = null;
+function scrollToNext() {
+    window.scrollTo({
+        top: window.innerHeight,
+        behavior: 'smooth'
     });
 }
 
-function showInstallPrompt() {
-    const installBanner = document.createElement('div');
-    installBanner.innerHTML = `
-        <div style="position: fixed; bottom: 20px; left: 20px; right: 20px; background: linear-gradient(45deg, #4DF7EC, #3DD5D0); color: #1e293b; padding: 15px 20px; border-radius: 15px; box-shadow: 0 10px 30px rgba(77, 247, 236, 0.3); z-index: 1002; display: flex; align-items: center; justify-content: space-between;">
-            <div>
-                <strong>Install EvenUp!</strong>
-                <div style="font-size: 0.9rem; opacity: 0.8;">Get faster access from your home screen</div>
-            </div>
-            <div>
-                <button id="install-btn" style="background: rgba(30, 41, 59, 0.1); border: none; padding: 8px 16px; border-radius: 8px; margin-right: 10px; font-weight: 600; cursor: pointer;">Install</button>
-                <button id="dismiss-btn" style="background: none; border: none; font-size: 1.2rem; opacity: 0.7; cursor: pointer;">×</button>
-            </div>
-        </div>
-    `;
+// ========================================
+// FORM MANAGEMENT
+// ========================================
 
-    document.body.appendChild(installBanner);
-
-    // Install button click
-    document.getElementById('install-btn').addEventListener('click', async () => {
-        if (deferredPrompt) {
-            deferredPrompt.prompt();
-            const { outcome } = await deferredPrompt.userChoice;
-            console.log(`User response to install prompt: ${outcome}`);
-            deferredPrompt = null;
-        }
-        document.body.removeChild(installBanner);
-    });
-
-    // Dismiss button click
-    document.getElementById('dismiss-btn').addEventListener('click', () => {
-        document.body.removeChild(installBanner);
-    });
-}
-
-function showUpdatePrompt() {
-    const updateBanner = document.createElement('div');
-    updateBanner.innerHTML = `
-        <div style="position: fixed; top: 80px; left: 20px; right: 20px; background: #3DD5D0; color: #1e293b; padding: 15px 20px; border-radius: 15px; box-shadow: 0 10px 30px rgba(61, 213, 208, 0.3); z-index: 1002; display: flex; align-items: center; justify-content: space-between;">
-            <div>
-                <strong>New version available!</strong>
-                <div style="font-size: 0.9rem; opacity: 0.8;">Update to get the latest features</div>
-            </div>
-            <div>
-                <button id="update-btn" style="background: rgba(30, 41, 59, 0.1); border: none; padding: 8px 16px; border-radius: 8px; margin-right: 10px; font-weight: 600; cursor: pointer;">Update</button>
-                <button id="update-dismiss-btn" style="background: none; border: none; font-size: 1.2rem; opacity: 0.7; cursor: pointer;">×</button>
-            </div>
-        </div>
-    `;
-
-    document.body.appendChild(updateBanner);
-
-    // Update button click
-    document.getElementById('update-btn').addEventListener('click', () => {
-        window.location.reload();
-    });
-
-    // Dismiss button click
-    document.getElementById('update-dismiss-btn').addEventListener('click', () => {
-        document.body.removeChild(updateBanner);
-    });
-}
-
-// Form Validation
 function initializeForms() {
     const loginForm = document.getElementById('loginForm');
     const signupForm = document.getElementById('signupForm');
@@ -265,7 +102,6 @@ async function handleLoginSubmit(e) {
         return;
     }
 
-    // Basic validation
     if (username.length < 3) {
         showNotification('Username must be at least 3 characters long', 'error');
         return;
@@ -298,7 +134,8 @@ async function handleSignupSubmit(e) {
     };
 
     // Validation
-    if (!formData.email || !formData.fullName || !formData.username || !formData.password || !formData.birthDate || !formData.phoneNumber) {
+    if (!formData.email || !formData.fullName || !formData.username ||
+        !formData.password || !formData.birthDate || !formData.phoneNumber) {
         showNotification('Please fill in all fields', 'error');
         return;
     }
@@ -334,12 +171,20 @@ function isValidEmail(email) {
     return emailRegex.test(email);
 }
 
+// ========================================
+// NOTIFICATION SYSTEM
+// ========================================
+
 function showNotification(message, type = 'info') {
     const notification = document.createElement('div');
-    const bgColor = type === 'error' ? '#ef4444' : type === 'success' ? '#10b981' : '#3b82f6';
+    const bgColor = type === 'error' ? '#ef4444' :
+        type === 'success' ? '#10b981' : '#3b82f6';
 
     notification.innerHTML = `
-        <div style="position: fixed; top: 100px; left: 50%; transform: translateX(-50%); background: ${bgColor}; color: white; padding: 15px 25px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 1003; font-weight: 600;">
+        <div style="position: fixed; top: 100px; left: 50%; transform: translateX(-50%); 
+                    background: ${bgColor}; color: white; padding: 15px 25px; 
+                    border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); 
+                    z-index: 1003; font-weight: 600;">
             ${message}
         </div>
     `;
@@ -353,7 +198,10 @@ function showNotification(message, type = 'info') {
     }, 4000);
 }
 
-// Profile Functions
+// ========================================
+// PROFILE MANAGEMENT
+// ========================================
+
 function uploadProfilePicture() {
     const input = document.createElement('input');
     input.type = 'file';
@@ -366,7 +214,11 @@ function uploadProfilePicture() {
             reader.onload = (e) => {
                 const profilePicture = document.querySelector('.profile-picture');
                 if (profilePicture) {
-                    profilePicture.innerHTML = `<img src="${e.target.result}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" alt="Profile Picture">`;
+                    profilePicture.innerHTML = `
+                        <img src="${e.target.result}" 
+                             style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" 
+                             alt="Profile Picture">
+                    `;
                 }
             };
             reader.readAsDataURL(file);
@@ -404,17 +256,27 @@ function editUsername() {
 function showEditModal(fieldName, inputType, currentValue) {
     const modal = document.createElement('div');
     modal.innerHTML = `
-        <div style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1004;">
-            <div style="background: var(--card-bg); padding: 30px; border-radius: 20px; width: 90%; max-width: 400px; backdrop-filter: blur(20px);">
-                <h3 style="margin-bottom: 20px; color: var(--text-primary); font-size: 1.5rem; font-weight: 700;">Edit ${fieldName}</h3>
+        <div style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); 
+                    display: flex; align-items: center; justify-content: center; z-index: 1004;">
+            <div style="background: var(--card-bg); padding: 30px; border-radius: 20px; 
+                        width: 90%; max-width: 400px; backdrop-filter: blur(20px);">
+                <h3 style="margin-bottom: 20px; color: var(--text-primary); 
+                           font-size: 1.5rem; font-weight: 700;">Edit ${fieldName}</h3>
                 <div style="margin-bottom: 20px;">
-                    <input type="${inputType}" id="editInput" value="${inputType === 'password' ? '' : currentValue}" 
+                    <input type="${inputType}" id="editInput" 
+                           value="${inputType === 'password' ? '' : currentValue}" 
                            placeholder="${inputType === 'password' ? 'Enter new password' : currentValue}"
-                           style="width: 100%; padding: 12px; border: 2px solid var(--input-border); border-radius: 10px; background: var(--input-bg); color: var(--text-primary); font-family: 'Lexend', sans-serif;">
+                           style="width: 100%; padding: 12px; border: 2px solid var(--input-border); 
+                                  border-radius: 10px; background: var(--input-bg); 
+                                  color: var(--text-primary); font-family: 'Lexend', sans-serif;">
                 </div>
                 <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                    <button id="cancelEdit" style="padding: 10px 20px; border: 2px solid var(--primary-color); background: transparent; color: var(--primary-color); border-radius: 10px; font-weight: 600; cursor: pointer;">Cancel</button>
-                    <button id="saveEdit" style="padding: 10px 20px; border: none; background: var(--primary-gradient); color: #1e293b; border-radius: 10px; font-weight: 600; cursor: pointer;">Save</button>
+                    <button id="cancelEdit" style="padding: 10px 20px; border: 2px solid var(--primary-color); 
+                                                   background: transparent; color: var(--primary-color); 
+                                                   border-radius: 10px; font-weight: 600; cursor: pointer;">Cancel</button>
+                    <button id="saveEdit" style="padding: 10px 20px; border: none; 
+                                                 background: var(--primary-gradient); color: #1e293b; 
+                                                 border-radius: 10px; font-weight: 600; cursor: pointer;">Save</button>
                 </div>
             </div>
         </div>
@@ -436,18 +298,14 @@ function showEditModal(fieldName, inputType, currentValue) {
         }
     });
 
-    // Focus on input
     setTimeout(() => {
         document.getElementById('editInput').focus();
     }, 100);
 }
 
-// Initialize Everything
 document.addEventListener('DOMContentLoaded', () => {
     initializeTheme();
     initializeNavigation();
     initializeScrollEffects();
     initializeForms();
-    registerServiceWorker();
-    initializePWAPrompt();
 });

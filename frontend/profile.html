@@ -2,31 +2,31 @@
 <html lang="en">
 
 <head>
+    <!-- PWA Meta Tags -->
     <link rel="manifest" href="/manifest.json">
     <meta name="apple-mobile-web-app-title" content="EvenUp">
     <meta name="application-name" content="EvenUp">
     <link rel="apple-touch-icon" sizes="192x192" href="./media/icons/evenup-192x192.png">
-    <script src="./js/pwa.js"></script>
+    <meta name="theme-color" content="#4DF7EC">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <!-- Basic Meta -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EvenUp - Profile</title>
 
-    <!-- Bulma CSS -->
+    <!-- External Stylesheets -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.9.4/css/bulma.min.css">
-
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- Google Fonts - Lexend -->
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap"
         rel="stylesheet">
 
-    <!-- PWA Meta Tags -->
-    <meta name="theme-color" content="#4DF7EC">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <!-- Custom Styles -->
     <link rel="stylesheet" href="./css/styles.css">
     <link rel="shortcut icon" href="./media/icons/evenup.ico" type="image/x-icon">
 </head>
@@ -76,7 +76,6 @@
             <h1 class="page-title">YOUR PROFILE</h1>
 
             <div class="profile-grid">
-                <!-- Centered Column -->
                 <div class="profile-card">
                     <div class="profile-picture-section">
                         <div class="profile-picture" onclick="uploadProfilePicture()">
@@ -166,6 +165,9 @@
             </div>
         </div>
     </section>
+
+    <!-- Scripts -->
+    <script src="./js/pwa.js"></script>
     <script src="./js/main.js"></script>
 </body>
 
