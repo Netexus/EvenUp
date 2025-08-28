@@ -1,3 +1,78 @@
+/**
+ * Main JavaScript file for EvenUp
+ * Handles theme management, navigation, forms, UI interactions, authentication, and PWA features.
+ */
+
+// ========================================
+// AUTHENTICATION MANAGEMENT
+// ========================================
+const Auth = {
+    async login(username, password) {
+        try {
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    username,
+                    password
+                })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Login failed');
+            }
+
+            const data = await response.json();
+
+            // Save token if the backend provides it
+            if (data.token) {
+                localStorage.setItem('authToken', data.token);
+            }
+
+            return data;
+        } catch (error) {
+            throw error;
+        }
+    },
+
+    async register(formData) {
+        try {
+            const response = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Registration failed');
+            }
+
+            return await response.json();
+        } catch (error) {
+            throw error;
+        }
+    },
+
+    async logout() {
+        localStorage.removeItem('authToken');
+        window.location.href = './login.html';
+    },
+
+    isAuthenticated() {
+        return localStorage.getItem('authToken') !== null;
+    }
+};
+
+// ========================================
+// THEME MANAGEMENT
+// ========================================
+
 function initializeTheme() {
     const savedTheme = localStorage.getItem('theme') || 'light';
     document.documentElement.setAttribute('data-theme', savedTheme);
@@ -75,6 +150,37 @@ function scrollToNext() {
 }
 
 // ========================================
+// AVATAR DROPDOWN MANAGEMENT
+// ========================================
+
+function toggleAvatarDropdown() {
+    const dropdown = document.getElementById('avatarDropdown');
+    if (dropdown) {
+        dropdown.classList.toggle('active');
+    }
+}
+
+function editProfile() {
+    const dropdown = document.getElementById('avatarDropdown');
+    if (dropdown) {
+        dropdown.classList.remove('active');
+    }
+    console.log('Edit profile clicked');
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function (event) {
+    const avatar = document.querySelector('.user-avatar');
+    const dropdown = document.getElementById('avatarDropdown');
+
+    if (dropdown && avatar) {
+        if (!avatar.contains(event.target)) {
+            dropdown.classList.remove('active');
+        }
+    }
+});
+
+// ========================================
 // FORM MANAGEMENT
 // ========================================
 
@@ -102,6 +208,7 @@ async function handleLoginSubmit(e) {
         return;
     }
 
+    // Basic validation
     if (username.length < 3) {
         showNotification('Username must be at least 3 characters long', 'error');
         return;
@@ -134,8 +241,7 @@ async function handleSignupSubmit(e) {
     };
 
     // Validation
-    if (!formData.email || !formData.fullName || !formData.username ||
-        !formData.password || !formData.birthDate || !formData.phoneNumber) {
+    if (!formData.email || !formData.fullName || !formData.username || !formData.password || !formData.birthDate || !formData.phoneNumber) {
         showNotification('Please fill in all fields', 'error');
         return;
     }
@@ -196,6 +302,117 @@ function showNotification(message, type = 'info') {
             document.body.removeChild(notification);
         }
     }, 4000);
+}
+
+// ========================================
+// PWA MANAGEMENT
+// ========================================
+
+// Service Worker Registration
+function registerServiceWorker() {
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js')
+                .then(registration => {
+                    console.log('Service Worker registered successfully:', registration);
+
+                    // Check for updates
+                    registration.addEventListener('updatefound', () => {
+                        const newWorker = registration.installing;
+                        if (newWorker) {
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    showUpdatePrompt();
+                                }
+                            });
+                        }
+                    });
+                })
+                .catch(error => {
+                    console.log('Service Worker registration failed:', error);
+                });
+        });
+    }
+}
+
+// PWA Install Prompt
+let deferredPrompt;
+
+function initializePWAPrompt() {
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        showInstallPrompt();
+    });
+
+    window.addEventListener('appinstalled', () => {
+        console.log('PWA was installed');
+        deferredPrompt = null;
+    });
+}
+
+function showInstallPrompt() {
+    const installBanner = document.createElement('div');
+    installBanner.innerHTML = `
+        <div style="position: fixed; bottom: 20px; left: 20px; right: 20px; background: linear-gradient(45deg, #4DF7EC, #3DD5D0); color: #1e293b; padding: 15px 20px; border-radius: 15px; box-shadow: 0 10px 30px rgba(77, 247, 236, 0.3); z-index: 1002; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <strong>Install EvenUp!</strong>
+                <div style="font-size: 0.9rem; opacity: 0.8;">Get faster access from your home screen</div>
+            </div>
+            <div>
+                <button id="install-btn" style="background: rgba(30, 41, 59, 0.1); border: none; padding: 8px 16px; border-radius: 8px; margin-right: 10px; font-weight: 600; cursor: pointer;">Install</button>
+                <button id="dismiss-btn" style="background: none; border: none; font-size: 1.2rem; opacity: 0.7; cursor: pointer;">×</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(installBanner);
+
+    // Install button click
+    document.getElementById('install-btn').addEventListener('click', async () => {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const {
+                outcome
+            } = await deferredPrompt.userChoice;
+            console.log(`User response to install prompt: ${outcome}`);
+            deferredPrompt = null;
+        }
+        document.body.removeChild(installBanner);
+    });
+
+    // Dismiss button click
+    document.getElementById('dismiss-btn').addEventListener('click', () => {
+        document.body.removeChild(installBanner);
+    });
+}
+
+function showUpdatePrompt() {
+    const updateBanner = document.createElement('div');
+    updateBanner.innerHTML = `
+        <div style="position: fixed; top: 80px; left: 20px; right: 20px; background: #3DD5D0; color: #1e293b; padding: 15px 20px; border-radius: 15px; box-shadow: 0 10px 30px rgba(61, 213, 208, 0.3); z-index: 1002; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <strong>New version available!</strong>
+                <div style="font-size: 0.9rem; opacity: 0.8;">Update to get the latest features</div>
+            </div>
+            <div>
+                <button id="update-btn" style="background: rgba(30, 41, 59, 0.1); border: none; padding: 8px 16px; border-radius: 8px; margin-right: 10px; font-weight: 600; cursor: pointer;">Update</button>
+                <button id="update-dismiss-btn" style="background: none; border: none; font-size: 1.2rem; opacity: 0.7; cursor: pointer;">×</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(updateBanner);
+
+    // Update button click
+    document.getElementById('update-btn').addEventListener('click', () => {
+        window.location.reload();
+    });
+
+    // Dismiss button click
+    document.getElementById('update-dismiss-btn').addEventListener('click', () => {
+        document.body.removeChild(updateBanner);
+    });
 }
 
 // ========================================
@@ -303,9 +520,16 @@ function showEditModal(fieldName, inputType, currentValue) {
     }, 100);
 }
 
+
+// ========================================
+// INITIALIZATION
+// ========================================
+
 document.addEventListener('DOMContentLoaded', () => {
     initializeTheme();
     initializeNavigation();
     initializeScrollEffects();
     initializeForms();
+    registerServiceWorker();
+    initializePWAPrompt();
 });
