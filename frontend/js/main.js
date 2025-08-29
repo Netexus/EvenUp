@@ -423,6 +423,76 @@ function showUpdatePrompt() {
 // ========================================
 // PROFILE MANAGEMENT
 // ========================================
+async function loadProfile() {
+  try {
+    if (!token) {
+      window.location.href = "login.html";
+      return;
+    }
+
+    const response = await fetch(`${API_URL}/users/profile`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
+      }
+    });
+
+    if (!response.ok) throw new Error("Error al cargar el perfil");
+
+    const user = await response.json();
+
+    // Mapea todos los campos del usuario al HTML
+    document.getElementById("profile-name").innerText = user.name;
+    document.getElementById("profile-username").innerText = user.username;
+    document.getElementById("profile-email").innerText = user.email;
+    document.getElementById("profile-phone").innerText = user.phone;
+    document.getElementById("profile-birthdate").innerText = user.birthdate;
+    
+    
+
+  } catch (err) {
+    console.error(err);
+    window.location.href = "login.html";
+  }
+}
+
+document.addEventListener("DOMContentLoaded", loadProfile);
+async function loadProfile() {
+  try {
+    if (!token) {
+      window.location.href = "login.html";
+      return;
+    }
+
+    const response = await fetch(`${API_URL}/users/profile`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
+      }
+    });
+
+    if (!response.ok) throw new Error("Error al cargar el perfil");
+
+    const user = await response.json();
+
+    // Mapea todos los campos del usuario al HTML
+    document.getElementById("profile-name").innerText = user.name;
+    document.getElementById("profile-username").innerText = user.username;
+    document.getElementById("profile-email").innerText = user.email;
+    document.getElementById("profile-phone").innerText = user.phone;
+    document.getElementById("profile-birthdate").innerText = user.birthdate;
+    
+    
+
+  } catch (err) {
+    console.error(err);
+    window.location.href = "login.html";
+  }
+}
+
+document.addEventListener("DOMContentLoaded", loadProfile);
 
 function uploadProfilePicture() {
     const input = document.createElement('input');
@@ -458,7 +528,7 @@ function editPassword() {
 function editEmail() {
     showEditModal('Email', 'email', 'user@example.com');
 }
-
+profile
 function editFullName() {
     showEditModal('Full Name', 'text', 'John Doe');
 }
