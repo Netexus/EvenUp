@@ -30,7 +30,7 @@ exports.getUserBalanceValidator = [
 exports.createExpenseValidation = [
   body('group_id').optional({ nullable: true }).isInt({ min: 1 }).withMessage('Invalid group_id'),
   body('paid_by').isInt({ min: 1 }).withMessage('paid_by (user_id) required'),
-  body('amount'),
+  body('amount').isFloat({ gt: 0 }).withMessage('Amount must be a number greater than zero'),
   body('description').optional().isString(),
   body('category').optional().isString(),
   body('date').isISO8601().withMessage('date must be YYYY-MM-DD'),

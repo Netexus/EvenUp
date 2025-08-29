@@ -3,6 +3,7 @@ const router = express.Router();
 const ctrl = require('../controllers/expense.controller');
 const v = require('../middleware/validators');
 
+
 // ---------
 // Expenses
 // ---------
@@ -37,5 +38,11 @@ router.put('/:id/participants/:participantId', v.updateParticipantValidation, ct
 
 // Delete a participant from an expense
 router.delete('/:id/participants/:participantId', ctrl.deleteParticipant);
+
+// GET /api/expenses/summary/:groupId?userId=1
+router.get('/summary/:groupId', ExpensesSummaryController.getExpensesByGroupForUser);
+
+// GET /api/expenses/detail/:id
+router.get('/detail/:id', ExpenseDetailController.getExpenseDetail);
 
 module.exports = router;
