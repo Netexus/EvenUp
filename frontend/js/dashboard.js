@@ -204,16 +204,11 @@ function handleCategoryChange() {
         `;
     } else if (category === 'trip') {
         dynamicFormSection.innerHTML = `
+            
             <div class="field">
                 <label class="label">Destination</label>
                 <div class="control">
                     <input class="input" type="text" id="tripDestination" placeholder="e.g., Paris" required>
-                </div>
-            </div>
-            <div class="field">
-                <label class="label">Starting Point</label>
-                <div class="control">
-                    <input class="input" type="text" id="tripStartPoint" placeholder="e.g., Home" required>
                 </div>
             </div>
             <div class="field">
