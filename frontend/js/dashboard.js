@@ -9,13 +9,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (groupCategorySelect) {
         groupCategorySelect.addEventListener('change', handleCategoryChange);
     }
+
     const addMemberInput = document.getElementById('addMemberInput');
     if (addMemberInput) {
         addMemberInput.addEventListener('keydown', handleAddMember);
+        addMemberInput.addEventListener('input', handleMemberSearchInput);
+        addMemberInput.addEventListener('blur', () => setTimeout(clearMemberSuggestions, 150));
     }
     
     // Initial call to set up the group creation form
     handleCategoryChange();
+
+    // Load user's groups on startup
+    try { loadUserGroups(); } catch (_) {}
 
     // Add event listener for expense split method
     const splitMethodRadios = document.getElementsByName('splitMethod');
@@ -28,9 +34,14 @@ document.addEventListener('DOMContentLoaded', () => {
  * Helper and context 
  */
 const API_BASE = '/api';
-const authToken = () => localStorage.getItem('authToken') || '';
-const currentUser = () => JSON.parse(localStorage.getItem('currentUser') || '{}');
-const CURRENT_USER_ID = () => (currentUser()?.id || 1); // fallback 1 si hace falta
+// Prefer AuthHelper token, fallback to legacy key 'token'
+const authToken = () => (window.AuthHelper && AuthHelper.getToken && AuthHelper.getToken()) || localStorage.getItem('token') || '';
+// Prefer persisted 'user' from login flow
+const currentUser = () => {
+  try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; }
+};
+const CURRENT_USER_ID = () => (currentUser()?.id || currentUser()?.user_id || 0); // 0 if unknown
+const CURRENT_USERNAME = () => (currentUser()?.username || '');
 
 async function apiFetch(path, { method = 'GET', body } = {}) {
   const res = await fetch(`${API_BASE}${path}`, {
@@ -48,11 +59,26 @@ async function apiFetch(path, { method = 'GET', body } = {}) {
   return res.json().catch(() => ({}));
 }
 
-// Helper to obtain the active group ID
+// Cache of users for username resolution
+let __usersCache = null;
+async function fetchAllUsers() {
+  if (__usersCache) return __usersCache;
+  __usersCache = await apiFetch('/users');
+  return __usersCache;
+}
+
+function resolveUserByUsername(users, username) {
+  if (!Array.isArray(users) || !username) return null;
+  const uname = String(username).trim();
+  return users.find(u => (u.username || '').toLowerCase() === uname.toLowerCase()) || null;
+}
+
+// Helper to obtain the active group ID (fallback to persisted value)
 function getActiveGroupId() {
-  return Number(
-    (window.currentGroup && (window.currentGroup.group_id ?? window.currentGroup.id)) || 0
-  );
+  const fromState = (window.currentGroup && (window.currentGroup.group_id ?? window.currentGroup.id)) || null;
+  const fromDom = document.getElementById('groupDetailsSection')?.getAttribute('data-active-group-id') || null;
+  const fromStorage = Number(localStorage.getItem('active_group_id') || 0) || null;
+  return Number(fromState || fromDom || fromStorage || 0);
 }
 
 // ========================================
@@ -76,16 +102,22 @@ let currentGroup = null;
  */
 function showGroupDetails(group) {
     currentGroup = group;
+    try { window.currentGroup = group; } catch (_) {}
     document.getElementById('groupsSection').classList.add('is-hidden');
     document.getElementById('groupDetailsSection').classList.remove('is-hidden');
+    try {
+      document.getElementById('groupDetailsSection')?.setAttribute('data-active-group-id', String(group.group_id || group.id || ''));
+      localStorage.setItem('active_group_id', String(group.group_id || group.id || ''));
+    } catch (_) {}
     
     // Populate group details
-    document.getElementById('groupNameTitle').textContent = group.name;
-    document.getElementById('groupDetailsAvatar').textContent = group.name.substring(0, 2).toUpperCase();
-    document.getElementById('groupMembers').textContent = `${group.members.length} members`;
-    document.getElementById('totalExpenses').textContent = `$${group.totalExpenses}`;
-    document.getElementById('youOwe').textContent = `$${group.youOwe}`;
-    document.getElementById('youAreOwed').textContent = `$${group.youAreOwed}`;
+    const gname = group.name || group.group_name || '';
+    document.getElementById('groupNameTitle').textContent = gname;
+    document.getElementById('groupDetailsAvatar').textContent = gname.substring(0, 2).toUpperCase();
+    document.getElementById('groupMembers').textContent = `${(group.members||[]).length} members`;
+    document.getElementById('totalExpenses').textContent = `$${Number(group.totalExpenses||0).toFixed(2)}`;
+    document.getElementById('youOwe').textContent = `$${Number(group.youOwe||0).toFixed(2)}`;
+    document.getElementById('youAreOwed').textContent = `$${Number(group.youAreOwed||0).toFixed(2)}`;
 }
 
 /**
@@ -94,6 +126,143 @@ function showGroupDetails(group) {
 function showDashboard() {
     document.getElementById('groupDetailsSection').classList.add('is-hidden');
     document.getElementById('groupsSection').classList.remove('is-hidden');
+}
+
+// ============================
+// Group details loading & Expense creation
+// ============================
+// Load groups for current user and render dashboard cards
+async function loadUserGroups() {
+  const userId = CURRENT_USER_ID();
+  if (!userId) return;
+  try {
+    const groups = await apiFetch(`/expense_groups/user/${userId}`);
+    window.groups = (Array.isArray(groups) ? groups : []);
+    renderGroupsGrid(window.groups);
+  } catch (e) {
+    console.warn('Failed to load user groups:', e);
+  }
+}
+
+function renderGroupsGrid(groups) {
+  const grid = document.getElementById('groupsGrid');
+  if (!grid) return;
+  // Preserve the add-group card
+  const addCard = grid.querySelector('.add-group-card');
+  grid.innerHTML = '';
+  if (addCard) grid.appendChild(addCard);
+
+  (groups || []).forEach(g => {
+    const card = document.createElement('div');
+    card.className = 'group-card';
+    const name = g.group_name || g.name || `Group ${g.group_id}`;
+    card.innerHTML = `
+      <div class="group-header">
+        <div class="group-avatar">${String(name).substring(0,2).toUpperCase()}</div>
+        <div class="group-info">
+          <h3>${name}</h3>
+          <p></p>
+        </div>
+      </div>
+    `;
+    card.onclick = () => loadAndShowGroupDetails(g.group_id || g.id);
+    grid.insertBefore(card, grid.querySelector('.add-group-card'));
+  });
+}
+// Load group data from backend and navigate to details
+async function loadAndShowGroupDetails(groupId) {
+  try {
+    // 1) Basic group info (endpoint returns either a row or an array)
+    let groupInfo = await apiFetch(`/expense_groups/${groupId}`);
+    if (Array.isArray(groupInfo)) groupInfo = groupInfo[0] || {};
+
+    // 2) Members
+    const memberships = await apiFetch(`/memberships/group/${groupId}`);
+    const members = (memberships || []).map(r => ({
+      id: r.user_id,
+      name: r.user_name || r.username || `User ${r.user_id}`
+    }));
+
+    // 3) Totals and balance
+    let totalExpenses = 0;
+    try {
+      const expenses = await apiFetch(`/expenses/group/${groupId}`);
+      totalExpenses = (Array.isArray(expenses) ? expenses : []).reduce((sum, e) => sum + Number(e.amount || 0), 0);
+    } catch (_) {}
+
+    let youOwe = 0, youAreOwed = 0;
+    try {
+      const bal = await apiFetch(`/settlements/balance/group/${groupId}/user/${CURRENT_USER_ID()}`);
+      const val = Number(bal?.net ?? bal?.balance ?? bal?.amount ?? 0);
+      if (val >= 0) { youAreOwed = val; } else { youOwe = Math.abs(val); }
+    } catch (_) {}
+
+    const group = {
+      id: groupInfo.group_id || groupId,
+      group_id: groupInfo.group_id || groupId,
+      name: groupInfo.group_name || groupInfo.name || '',
+      members,
+      totalExpenses,
+      youOwe,
+      youAreOwed
+    };
+    try { localStorage.setItem('active_group_id', String(group.group_id)); } catch (_) {}
+    showGroupDetails(group);
+  } catch (e) {
+    showNotification('Failed to load group details', 'error');
+  }
+}
+
+// Create expense with optional participants and refresh details
+async function addExpense() {
+  const group_id = getActiveGroupId();
+  const expense_name = (document.getElementById('expenseName')?.value || '').trim();
+  const description = (document.getElementById('expenseDescription')?.value || '').trim();
+  const category = (document.getElementById('expenseCategory')?.value || '').trim();
+  const date = document.getElementById('expenseDate')?.value;
+  const amount = parseFloat(document.getElementById('expenseAmount')?.value);
+  const paid_by = CURRENT_USER_ID();
+  const membersSelect = document.getElementById('expenseMembers');
+  const method = document.querySelector('input[name="splitMethod"]:checked')?.value || 'equitable';
+
+  if (!group_id) return showNotification('No active group selected.', 'error');
+  if (!expense_name || !date || isNaN(amount) || amount <= 0) return showNotification('Please fill all expense fields with valid values.', 'error');
+  if (!membersSelect) return showNotification('Members list not ready.', 'error');
+
+  const selectedIds = Array.from(membersSelect.options).filter(o => o.selected).map(o => Number(o.value));
+  if (!selectedIds.length) return showNotification('Select at least one participant.', 'error');
+
+  let participants = [];
+  if (method === 'equitable') {
+    const per = Math.round((amount / selectedIds.length) * 100) / 100;
+    participants = selectedIds.map(uid => ({ user_id: uid, share_amount: per }));
+  } else {
+    const inputs = Array.from(document.querySelectorAll('#percentageInputs input'));
+    const membersOrder = ((currentGroup && currentGroup.members) || []).map(m => m.id);
+    // Sum only selected participants' percentages
+    const selectedPercents = selectedIds.map(uid => {
+      const idx = membersOrder.indexOf(uid);
+      const val = parseFloat(inputs[idx]?.value || '0');
+      return isNaN(val) ? 0 : val;
+    });
+    const sumPct = selectedPercents.reduce((a,b)=>a+b,0);
+    if (Math.round(sumPct) !== 100) return showNotification('Percentages must sum to 100% for selected members', 'error');
+    participants = selectedIds.map((uid) => {
+      const idx = membersOrder.indexOf(uid);
+      const pct = parseFloat(inputs[idx]?.value || '0');
+      const share = Math.round((amount * ((isNaN(pct)?0:pct)/100)) * 100) / 100;
+      return { user_id: uid, share_amount: share };
+    });
+  }
+
+  try {
+    await apiFetch('/expenses', { method: 'POST', body: { group_id, paid_by, amount, description, category, date, expense_name, participants } });
+    showNotification('Expense created successfully!', 'success');
+    closeAddExpenseModal();
+    await loadAndShowGroupDetails(group_id);
+  } catch (err) {
+    showNotification(err.message, 'error');
+  }
 }
 
 
@@ -123,13 +292,58 @@ function closeCreateGroupModal() {
 }
 
 /**
+ * Resets the create group modal form and member tags to initial state.
+ */
+function resetCreateGroupForm() {
+  // Text inputs
+  const nameInput = document.getElementById('groupName');
+  if (nameInput) nameInput.value = '';
+
+  // Category back to 'other' and refresh dynamic fields
+  const catSel = document.getElementById('groupCategory');
+  if (catSel) {
+    catSel.value = 'other';
+    handleCategoryChange();
+  }
+
+  // Clear dynamic specific inputs if present
+  const relName = document.getElementById('relationshipName');
+  if (relName) relName.value = '';
+  const yourIncome = document.getElementById('yourIncome');
+  if (yourIncome) yourIncome.value = '';
+  const partnerIncome = document.getElementById('partnerIncome');
+  if (partnerIncome) partnerIncome.value = '';
+
+  const tripDestination = document.getElementById('tripDestination');
+  if (tripDestination) tripDestination.value = '';
+  const tripStartPoint = document.getElementById('tripStartPoint');
+  if (tripStartPoint) tripStartPoint.value = '';
+  const tripDepartureDate = document.getElementById('tripDepartureDate');
+  if (tripDepartureDate) tripDepartureDate.value = '';
+  const tripArrivalDate = document.getElementById('tripArrivalDate');
+  if (tripArrivalDate) tripArrivalDate.value = '';
+
+  // Clear member tags and input
+  const memberTags = document.getElementById('memberTags');
+  if (memberTags) memberTags.innerHTML = '';
+  const addMemberInput = document.getElementById('addMemberInput');
+  if (addMemberInput) addMemberInput.value = '';
+  clearMemberSuggestions();
+}
+
+/**
  * Shows the add payment modal and populates member lists.
  */
 function showAddPaymentModal() {
     const modal = document.getElementById('addPaymentModal');
     if (modal) {
-        populateMemberSelects('paymentFrom', currentGroup.members);
-        populateMemberSelects('paymentTo', currentGroup.members);
+        const members = (currentGroup && currentGroup.members) || [];
+        if (members.length < 2) {
+          showNotification('You need at least 2 members to record a payment.', 'error');
+          return;
+        }
+        populateMemberSelects('paymentFrom', members);
+        populateMemberSelects('paymentTo', members);
         modal.classList.add('is-active');
     }
 }
@@ -151,7 +365,12 @@ function closeAddPaymentModal() {
 function showAddExpenseModal() {
     const modal = document.getElementById('addExpenseModal');
     if (modal) {
-        populateMemberSelects('expenseMembers', currentGroup.members);
+        const members = (currentGroup && currentGroup.members) || [];
+        if (members.length < 2) {
+          showNotification('Add at least one more member to create expenses.', 'error');
+          return;
+        }
+        populateMemberSelects('expenseMembers', members);
         handleSplitMethodChange();
         modal.classList.add('is-active');
     }
@@ -237,14 +456,16 @@ function handleCategoryChange() {
  * Shows or hides the percentage inputs based on the selection.
  */
 function handleSplitMethodChange() {
-    const method = document.querySelector('input[name="splitMethod"]:checked').value;
+    const method = document.querySelector('input[name="splitMethod"]:checked')?.value || 'equitable';
     const percentageSection = document.getElementById('percentageSplitSection');
     const percentageInputsDiv = document.getElementById('percentageInputs');
-    
+    const members = (currentGroup && currentGroup.members) || [];
+    if (!percentageSection || !percentageInputsDiv) return;
+
     if (method === 'percentage') {
         percentageSection.style.display = 'block';
         percentageInputsDiv.innerHTML = '';
-        currentGroup.members.forEach(member => {
+        members.forEach(member => {
             const inputHTML = `
                 <div class="field is-horizontal">
                     <div class="field-label is-normal">
@@ -293,10 +514,9 @@ function populateMemberSelects(selectId, members) {
 // ========================================
 // GROUP CREATION LOGIC
 // ========================================
-
 /**
  * Handles the creation of a new group.
- * Gathers form data, validates it, and simulates group creation.
+ * Gathers form data, validates it, and creates memberships.
  */
 async function createGroup() {
   const groupName = document.getElementById('groupName').value.trim();
@@ -305,6 +525,41 @@ async function createGroup() {
 
   if (!groupName) {
     showNotification('Group name is required.', 'error');
+    return;
+  }
+
+  // Resolve and validate members: ensure at least one additional valid user besides the creator
+  const creatorUname = CURRENT_USERNAME();
+  const inputMembers = (members || [])
+    .filter(m => m && m !== 'You')
+    .map(m => String(m).trim())
+    .filter(Boolean);
+
+  const resolvedUsers = [];
+  const notFound = [];
+  for (const uname of inputMembers) {
+    if (creatorUname && uname.toLowerCase() === creatorUname.toLowerCase()) continue;
+    try {
+      const matches = await apiFetch(`/users/search?query=${encodeURIComponent(uname)}&limit=3`);
+      const exact = Array.isArray(matches) ? matches.find(u => (u.username||'').toLowerCase() === uname.toLowerCase()) : null;
+      if (exact && exact.user_id) {
+        if (!resolvedUsers.find(u => u.user_id === exact.user_id)) {
+          resolvedUsers.push({ user_id: exact.user_id, username: exact.username });
+        }
+      } else {
+        notFound.push(uname);
+      }
+    } catch (_) {
+      notFound.push(uname);
+    }
+  }
+
+  if (notFound.length) {
+    showNotification(`Some users not found: ${notFound.join(', ')}`, 'error');
+  }
+
+  if (resolvedUsers.length === 0) {
+    showNotification('Add at least one existing user by username to create a group.', 'error');
     return;
   }
 
@@ -332,16 +587,32 @@ async function createGroup() {
     // POST to backend
     const created = await apiFetch(path, { method: 'POST', body });
 
-    // (POST of memberships)
-
-    // Refresh UI:
-    closeCreateGroupModal();
-    showNotification(`Group "${created.group_name || groupName}" created!`, 'success');
-
-    // Si ya tienes carga de grupos desde backend, vuelve a cargar:
-    if (typeof loadGroupsFromApi === 'function') {
-      loadGroupsFromApi();
+    // Create creator membership with admin role (owner)
+    const newGroupId = created.group_id || created.id;
+    if (newGroupId && CURRENT_USER_ID()) {
+      try {
+        await apiFetch('/memberships', { method: 'POST', body: { group_id: newGroupId, user_id: CURRENT_USER_ID(), role: 'admin' } });
+      } catch (e) {
+        // Non-fatal for UI, but notify
+        console.warn('Membership creation failed:', e);
+      }
     }
+
+    // Create additional memberships from resolved users
+    for (const u of resolvedUsers) {
+      try {
+        await apiFetch('/memberships', { method: 'POST', body: { group_id: newGroupId, user_id: u.user_id } });
+      } catch (e) {
+        console.warn(`Failed to add member ${u.username}:`, e);
+      }
+    }
+
+    // Refresh UI and navigate to details
+    closeCreateGroupModal();
+    showNotification(`Group "${created.group_name || created.name || groupName}" created!`, 'success');
+    await loadAndShowGroupDetails(newGroupId);
+    // refresh groups list
+    try { await loadUserGroups(); } catch (_) {}
   } catch (err) {
     showNotification(err.message, 'error');
   }
@@ -423,6 +694,10 @@ function handleAddMember(e) {
  */
 function addMemberToTags(name) {
     const memberTagsContainer = document.getElementById('memberTags');
+    // prevent duplicates
+    const existing = Array.from(document.querySelectorAll('#memberTags .tag'))
+      .map(t => t.textContent.trim().replace(/\s*×\s*$/, ''));
+    if (existing.some(t => t.toLowerCase() === String(name).toLowerCase())) return;
     const newTagHTML = `
         <span class="tag is-info is-light">
             ${name}
@@ -455,7 +730,7 @@ function getMembers() {
 /**
  * Handles the submission of the add payment form.
  */
-function addPayment() {
+function addPaymentLegacy() {
     const from = document.getElementById('paymentFrom').value;
     const to = document.getElementById('paymentTo').value;
     const amount = document.getElementById('paymentAmount').value;
@@ -499,10 +774,7 @@ async function addPayment() {
     await apiFetch('/settlements', { method: 'POST', body: { group_id, from_user: from, to_user: to, amount } });
     showNotification('Payment recorded successfully!', 'success');
     closeAddPaymentModal();
-
-    if (typeof reloadGroupDetails === 'function') {
-      reloadGroupDetails(group_id);
-    }
+    await loadAndShowGroupDetails(group_id);
   } catch (err) {
     showNotification(err.message, 'error');
   }
@@ -513,6 +785,74 @@ async function addPayment() {
 // ========================================
 // UTILITY FUNCTIONS (Reused from main.js)
 // ========================================
+
+// Debounce utility
+function debounce(fn, wait = 250) {
+  let t;
+  return (...args) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn.apply(null, args), wait);
+  };
+}
+
+// Autocomplete member search handlers
+const handleMemberSearchInput = debounce(async (e) => {
+  const q = String(e.target.value || '').trim();
+  if (!q || q.length < 2) { clearMemberSuggestions(); return; }
+  try {
+    const results = await apiFetch(`/users/search?query=${encodeURIComponent(q)}&limit=7`);
+    renderMemberSuggestions(results || [], q);
+  } catch (_) {
+    clearMemberSuggestions();
+  }
+}, 250);
+
+function ensureSuggestionContainer() {
+  let el = document.getElementById('addMemberSuggestions');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'addMemberSuggestions';
+    el.style.position = 'absolute';
+    el.style.zIndex = '1002';
+    el.style.background = 'white';
+    el.style.border = '1px solid #ddd';
+    el.style.borderRadius = '6px';
+    el.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
+    el.style.minWidth = '240px';
+    const input = document.getElementById('addMemberInput');
+    input.parentElement.style.position = 'relative';
+    input.parentElement.appendChild(el);
+  }
+  return el;
+}
+
+function renderMemberSuggestions(list, q) {
+  const el = ensureSuggestionContainer();
+  if (!list.length) { el.innerHTML = ''; el.style.display = 'none'; return; }
+  const esc = (s) => String(s || '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  el.innerHTML = list.map(u => `
+    <div class="suggest-item" data-username="${esc(u.username)}" style="padding:8px 12px; cursor:pointer;">
+      <div style="font-weight:600;">${esc(u.username)}</div>
+      <div style="font-size:12px; color:#666;">${esc(u.email || '')} ${u.name ? '• ' + esc(u.name) : ''}</div>
+    </div>
+  `).join('');
+  el.style.display = 'block';
+  Array.from(el.querySelectorAll('.suggest-item')).forEach(item => {
+    item.addEventListener('mousedown', (ev) => {
+      ev.preventDefault();
+      const uname = item.getAttribute('data-username');
+      if (uname) addMemberToTags(uname);
+      const input = document.getElementById('addMemberInput');
+      if (input) input.value = '';
+      clearMemberSuggestions();
+    });
+  });
+}
+
+function clearMemberSuggestions() {
+  const el = document.getElementById('addMemberSuggestions');
+  if (el) { el.innerHTML = ''; el.style.display = 'none'; }
+}
 
 /**
  * Displays a temporary notification message to the user.
