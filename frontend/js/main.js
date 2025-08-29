@@ -32,6 +32,10 @@ const Auth = {
                 localStorage.setItem('authToken', data.token);
             }
 
+            if (data.user) {
+                localStorage.setItem('currentUser', JSON.stringify(data.user)); // {id, username, email, fullName}
+             }
+
             return data;
         } catch (error) {
             throw error;
@@ -179,6 +183,7 @@ document.addEventListener('click', function (event) {
         }
     }
 });
+
 
 // ========================================
 // FORM MANAGEMENT

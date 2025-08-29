@@ -24,6 +24,37 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+/**
+ * Helper and context 
+ */
+const API_BASE = '/api';
+const authToken = () => localStorage.getItem('authToken') || '';
+const currentUser = () => JSON.parse(localStorage.getItem('currentUser') || '{}');
+const CURRENT_USER_ID = () => (currentUser()?.id || 1); // fallback 1 si hace falta
+
+async function apiFetch(path, { method = 'GET', body } = {}) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(authToken() ? { Authorization: `Bearer ${authToken()}` } : {})
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || err.error || (err.errors?.[0]?.msg) || `HTTP ${res.status}`);
+  }
+  return res.json().catch(() => ({}));
+}
+
+// Helper to obtain the active group ID
+function getActiveGroupId() {
+  return Number(
+    (window.currentGroup && (window.currentGroup.group_id ?? window.currentGroup.id)) || 0
+  );
+}
+
 // ========================================
 // GLOBAL STATE
 // ========================================
@@ -267,34 +298,55 @@ function populateMemberSelects(selectId, members) {
  * Handles the creation of a new group.
  * Gathers form data, validates it, and simulates group creation.
  */
-function createGroup() {
-    const groupName = document.getElementById('groupName').value.trim();
-    const groupCategory = document.getElementById('groupCategory').value;
-    const members = getMembers();
+async function createGroup() {
+  const groupName = document.getElementById('groupName').value.trim();
+  const groupCategory = document.getElementById('groupCategory').value;
+  const members = getMembers(); 
 
-    if (!groupName) {
-        showNotification('Group name is required.', 'error');
-        return;
-    }
-    
-    // Simulate group data structure
-    const newGroup = {
-        id: groupName.toLowerCase().replace(/\s/g, '-'),
-        name: groupName,
-        category: groupCategory,
-        members: members.map(name => ({ id: name.toLowerCase().replace(/\s/g, '-'), name: name })),
-        totalExpenses: 0,
-        youOwe: 0,
-        youAreOwed: 0,
-        payments: [],
-        expenses: []
+  if (!groupName) {
+    showNotification('Group name is required.', 'error');
+    return;
+  }
+
+  try {
+    let path = '/expense_groups/other';
+    let body = { 
+      group_name: groupName, 
+      created_by: CURRENT_USER_ID(), 
+      category: groupCategory 
     };
-    
-    // Add the new group card to the dashboard
-    renderGroupCard(newGroup);
+
+    if (groupCategory === 'relationship') {
+      path = '/expense_groups/relationship';
+      body.relationship_name = (document.getElementById('relationshipName')?.value || '').trim();
+      body.income_1 = Number(document.getElementById('yourIncome')?.value || 0);
+      body.income_2 = Number(document.getElementById('partnerIncome')?.value || 0);
+    } else if (groupCategory === 'trip') {
+      path = '/expense_groups/trip';
+      body.origin = (document.getElementById('tripStartPoint')?.value || '').trim();
+      body.destination = (document.getElementById('tripDestination')?.value || '').trim();
+      body.departure = document.getElementById('tripDepartureDate')?.value || null;
+      body.trip_return = document.getElementById('tripArrivalDate')?.value || null;
+    }
+
+    // POST to backend
+    const created = await apiFetch(path, { method: 'POST', body });
+
+    // (POST of memberships)
+
+    // Refresh UI:
     closeCreateGroupModal();
-    showNotification(`Group "${groupName}" created successfully!`, 'success');
+    showNotification(`Group "${created.group_name || groupName}" created!`, 'success');
+
+    // Si ya tienes carga de grupos desde backend, vuelve a cargar:
+    if (typeof loadGroupsFromApi === 'function') {
+      loadGroupsFromApi();
+    }
+  } catch (err) {
+    showNotification(err.message, 'error');
+  }
 }
+
 
 /**
  * Renders a new group card on the dashboard.
@@ -427,66 +479,36 @@ function addPayment() {
 /**
  * Handles the submission of the add expense form.
  */
-function addExpense() {
-    const expenseName = document.getElementById('expenseName').value.trim();
-    const expenseDescription = document.getElementById('expenseDescription').value.trim();
-    const expenseCategory = document.getElementById('expenseCategory').value.trim();
-    const expenseDate = document.getElementById('expenseDate').value.trim();
-    const expenseAmount = parseFloat(document.getElementById('expenseAmount').value);
-    const splitMethod = document.querySelector('input[name="splitMethod"]:checked').value;
-    const membersInvolved = Array.from(document.getElementById('expenseMembers').selectedOptions).map(option => option.value);
+async function addPayment() {
+  const from = Number(document.getElementById('paymentFrom').value);
+  const to = Number(document.getElementById('paymentTo').value);
+  const amount = parseFloat(document.getElementById('paymentAmount').value);
+  const group_id = getActiveGroupId();
 
-    if (!expenseName || !expenseCategory || !expenseDate || isNaN(expenseAmount) || expenseAmount <= 0) {
-        showNotification('Please fill in all required fields.', 'error');
-        return;
+  if (!group_id) return showNotification('No active group selected.', 'error');
+  if (!from || !to || isNaN(amount) || amount <= 0) {
+    showNotification('Please fill in all fields with valid values.', 'error');
+    return;
+  }
+  if (from === to) {
+    showNotification('Payer and receiver must be different users.', 'error');
+    return;
+  }
+
+  try {
+    await apiFetch('/settlements', { method: 'POST', body: { group_id, from_user: from, to_user: to, amount } });
+    showNotification('Payment recorded successfully!', 'success');
+    closeAddPaymentModal();
+
+    if (typeof reloadGroupDetails === 'function') {
+      reloadGroupDetails(group_id);
     }
-
-    if (membersInvolved.length === 0) {
-        showNotification('Please select at least one member.', 'error');
-        return;
-    }
-
-    let splitDetails;
-    if (splitMethod === 'equitable') {
-        const perPerson = expenseAmount / membersInvolved.length;
-        splitDetails = membersInvolved.map(memberId => ({ memberId, amount: perPerson }));
-    } else if (splitMethod === 'percentage') {
-        const percentageInputs = document.querySelectorAll('#percentageInputs input');
-        let totalPercentage = 0;
-        let validPercentages = true;
-        
-        splitDetails = Array.from(percentageInputs).map(input => {
-            const memberName = input.closest('.field-body').previousElementSibling.querySelector('.label').textContent;
-            const percentage = parseFloat(input.value);
-            if (isNaN(percentage) || percentage < 0) {
-                validPercentages = false;
-                return;
-            }
-            totalPercentage += percentage;
-            const amount = expenseAmount * (percentage / 100);
-            return { memberId: memberName.toLowerCase().replace(/\s/g, '-'), amount };
-        });
-
-        if (!validPercentages || totalPercentage !== 100) {
-            showNotification('Percentages must total exactly 100%.', 'error');
-            return;
-        }
-    }
-    
-    // Simulate expense logic
-    console.log('Adding expense:', {
-        name: expenseName,
-        description: expenseDescription,
-        category: expenseCategory,
-        date: expenseDate,
-        amount: expenseAmount,
-        splitMethod,
-        splitDetails
-    });
-
-    showNotification('Expense added successfully!', 'success');
-    closeAddExpenseModal();
+  } catch (err) {
+    showNotification(err.message, 'error');
+  }
 }
+
+
 
 // ========================================
 // UTILITY FUNCTIONS (Reused from main.js)
