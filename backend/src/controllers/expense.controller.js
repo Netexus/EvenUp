@@ -6,7 +6,7 @@ const ExpensesSummaryModel = require('../models/expense.model');
 const ExpenseDetailModel = require('../models/expense.model');
 
 // Create an expense (optionally with participants array)
-exports.createExpense = async (req, res) => {
+const createExpense = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
@@ -54,7 +54,7 @@ exports.createExpense = async (req, res) => {
   }
 };
 
-exports.getExpense = async (req, res) => {
+const getExpense = async (req, res) => {
   try {
     const expense = await Expense.getById(req.params.id);
     if (!expense) return res.status(404).json({ message: 'Expense not found' });
@@ -65,7 +65,7 @@ exports.getExpense = async (req, res) => {
   }
 };
 
-exports.getExpensesByGroup = async (req, res) => {
+const getExpensesByGroup = async (req, res) => {
   try {
     const expenses = await Expense.getByGroup(req.params.groupId);
     return res.json(expenses);
@@ -74,7 +74,7 @@ exports.getExpensesByGroup = async (req, res) => {
   }
 };
 
-exports.updateExpense = async (req, res) => {
+const updateExpense = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
@@ -88,7 +88,7 @@ exports.updateExpense = async (req, res) => {
   }
 };
 
-exports.deleteExpense = async (req, res) => {
+const deleteExpense = async (req, res) => {
   try {
     const ok = await Expense.remove(req.params.id);
     if (!ok) return res.status(404).json({ message: 'Expense not found' });
@@ -99,7 +99,7 @@ exports.deleteExpense = async (req, res) => {
 };
 
 // Participants sub-resources
-exports.getParticipants = async (req, res) => {
+const getParticipants = async (req, res) => {
   try {
     const items = await Participants.getByExpense(req.params.id);
     return res.json(items);
@@ -108,7 +108,7 @@ exports.getParticipants = async (req, res) => {
   }
 };
 
-exports.addParticipants = async (req, res) => {
+const addParticipants = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
@@ -120,7 +120,7 @@ exports.addParticipants = async (req, res) => {
   }
 };
 
-exports.updateParticipant = async (req, res) => {
+const updateParticipant = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
@@ -133,7 +133,7 @@ exports.updateParticipant = async (req, res) => {
   }
 };
 
-exports.deleteParticipant = async (req, res) => {
+const deleteParticipant = async (req, res) => {
   try {
     const ok = await Participants.remove(req.params.participantId);
     if (!ok) return res.status(404).json({ message: 'Participant not found' });
@@ -186,7 +186,26 @@ const ExpenseDetailController = {
   }
 };
 
-module.exports = ExpenseDetailController;
-module.exports = ExpensesSummaryController;
-
-
+// Combine all exports
+module.exports = {
+  // Main expense operations
+  createExpense,
+  getExpense,
+  getExpensesByGroup,
+  updateExpense,
+  deleteExpense,
+  
+  // Participant operations
+  getParticipants,
+  addParticipants,
+  updateParticipant,
+  deleteParticipant,
+  
+  // Include the controller objects
+  ...ExpensesSummaryController,
+  ...ExpenseDetailController,
+  
+  // Also export the controller objects directly for named imports
+  ExpensesSummaryController,
+  ExpenseDetailController
+};
