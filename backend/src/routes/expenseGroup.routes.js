@@ -5,6 +5,9 @@ const controller = require('../controllers/expenseGroup.controller');
 // Get all groups
 router.get('/', controller.getAllGroups);
 
+// Get groups by user (member or creator)
+router.get('/user/:userId', controller.getGroupsByUser);
+
 // Get group details
 router.get('/:id', controller.getGroupDetails);
 

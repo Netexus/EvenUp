@@ -1,4 +1,3 @@
-
 const db = require('../config/database.js');
 
 module.exports = {
@@ -31,6 +30,12 @@ module.exports = {
     getByEmail: (email, callback) => {
         const sql = 'SELECT * FROM app_users WHERE email = ?';
         db.query(sql, email, callback);
+    },
+
+    search: (query, limit = 10) => {
+        const like = `%${query}%`;
+        const sql = 'SELECT user_id, username, email, name FROM app_users WHERE username LIKE ? OR email LIKE ? ORDER BY created_at DESC LIMIT ?';
+        return db.query(sql, [like, like, Number(limit) || 10]);
     },
 
     update: (id, userData, callback) => {

@@ -1,4 +1,5 @@
 require('dotenv').config();
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const settlementRoutes = require('./routes/settlement.routes');
@@ -17,11 +18,13 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Serve static files from the frontend directory
-app.use(express.static('../frontend'));
+// Serve static files from the frontend directory (absolute path)
+const frontendDir = path.join(__dirname, '../../frontend');
+app.use(express.static(frontendDir));
 // Serve index.html for any unmatched frontend routes
 app.get(['/', '/index.html', '/dashboard.html', '/groups.html', '/expenses.html', '/settlements.html', '/profile.html', '/login.html', '/signup.html'], (req, res) => {
-    res.sendFile(req.path === '/' ? 'index.html' : req.path, { root: '../frontend' });
+    const fileToSend = req.path === '/' ? 'index.html' : req.path.replace(/^\//, '');
+    res.sendFile(path.join(frontendDir, fileToSend));
 });
 
 // API Routes

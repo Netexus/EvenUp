@@ -7,6 +7,19 @@ const ExpenseGroup = {
     return rows;
   },
 
+  async getByUser(userId) {
+    const [rows] = await pool.query(
+      `SELECT DISTINCT eg.*
+       FROM expense_groups eg
+       LEFT JOIN group_memberships gm
+         ON gm.group_id = eg.group_id
+       WHERE gm.user_id = ? OR eg.created_by = ?
+       ORDER BY eg.created_at DESC`,
+      [userId, userId]
+    );
+    return rows;
+  },
+
   async getById(id) {
     const [rows] = await pool.query('SELECT * FROM expense_groups WHERE group_id = ?', [id]);
     return rows[0];

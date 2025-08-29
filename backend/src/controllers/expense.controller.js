@@ -16,12 +16,12 @@ const createExpense = async (req, res) => {
   try {
     await conn.beginTransaction();
 
-    // Insert expense
-    const { group_id, paid_by, amount, description, category, date } = req.body;
+    // Insert expense (expense_name is required by schema)
+    const { group_id, paid_by, amount, description, category, date, expense_name } = req.body;
     const [result] = await conn.execute(
-      `INSERT INTO expenses (group_id, paid_by, amount, description, category, date)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [group_id, paid_by, amount, description ?? null, category ?? null, date]
+      `INSERT INTO expenses (group_id, paid_by, amount, description, category, date, expense_name)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [group_id, paid_by, amount, description ?? null, category ?? null, date, expense_name]
     );
     const expenseId = result.insertId;
 

@@ -3,15 +3,26 @@ const router = express.Router();
 
 
 const userController = require('../controllers/user.controller');
+const { requireAuth } = require('../middleware/jwt');
 
 // New user
 router.post('/', (req, res) => {
   userController.createUser(req, res);
 });
 
+// Get current user's profile (protected)
+router.get('/me', requireAuth, (req, res) => {
+  userController.getProfile(req, res);
+});
+
 // Get all users
 router.get('/', (req, res) => {
   userController.getUsers(req, res);
+});
+
+// Search users by username or email
+router.get('/search', (req, res) => {
+  userController.searchUsers(req, res);
 });
 
 // Get user by ID

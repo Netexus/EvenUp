@@ -7,10 +7,20 @@ const ExpenseGroupModel = require('../models/expenseGroup.model');
 const expenseGroupController = {
   getAllGroups: async (req, res) => {
     try {
-      const groups = await ExpenseGroupModel.getAllGroups();
+      const groups = await ExpenseGroupModel.getAll();
       res.json(groups);
     } catch (error) {
       res.status(500).json({ error: 'Error fetching groups' });
+    }
+  },
+
+  getGroupsByUser: async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const groups = await ExpenseGroupModel.getByUser(userId);
+      res.json(groups);
+    } catch (error) {
+      res.status(500).json({ error: 'Error fetching user groups' });
     }
   },
 
@@ -25,7 +35,7 @@ const expenseGroupController = {
 
   createGroupTrip: async (req, res) => {
     try {
-      const newGroup = await ExpenseGroupModel.createGroupTrip(req.body);
+      const newGroup = await ExpenseGroupModel.createTrip(req.body);
       res.status(201).json(newGroup);
     } catch (error) {
       res.status(500).json({ error: 'Error creating trip group' });
@@ -34,7 +44,7 @@ const expenseGroupController = {
 
   createGroupRelationship: async (req, res) => {
     try {
-      const newGroup = await ExpenseGroupModel.createGroupRelationship(req.body);
+      const newGroup = await ExpenseGroupModel.createRelationship(req.body);
       res.status(201).json(newGroup);
     } catch (error) {
       res.status(500).json({ error: 'Error creating relationship group' });
@@ -43,7 +53,7 @@ const expenseGroupController = {
 
   createGroupOther: async (req, res) => {
     try {
-      const newGroup = await ExpenseGroupModel.createGroupOther(req.body);
+      const newGroup = await ExpenseGroupModel.createOther(req.body);
       res.status(201).json(newGroup);
     } catch (error) {
       res.status(500).json({ error: 'Error creating other group' });
@@ -52,7 +62,7 @@ const expenseGroupController = {
 
   updateGroup: async (req, res) => {
     try {
-      const updated = await ExpenseGroupModel.updateGroup(req.params.id, req.body);
+      const updated = await ExpenseGroupModel.update(req.params.id, req.body);
       res.json(updated);
     } catch (error) {
       res.status(500).json({ error: 'Error updating group' });
@@ -61,7 +71,7 @@ const expenseGroupController = {
 
   deleteGroup: async (req, res) => {
     try {
-      const deleted = await ExpenseGroupModel.deleteGroup(req.params.id);
+      const deleted = await ExpenseGroupModel.delete(req.params.id);
       res.json(deleted);
     } catch (error) {
       res.status(500).json({ error: 'Error deleting group' });

@@ -27,14 +27,14 @@ const Auth = {
 
             const data = await response.json();
 
-            // Save token if the backend provides it
+            // Save token and user
             if (data.token) {
-                localStorage.setItem('authToken', data.token);
+                localStorage.setItem('token', data.token);
             }
 
             if (data.user) {
-                localStorage.setItem('currentUser', JSON.stringify(data.user)); // {id, username, email, fullName}
-             }
+                localStorage.setItem('user', JSON.stringify(data.user)); // {id, username, email, fullName}
+            }
 
             return data;
         } catch (error) {
@@ -64,12 +64,20 @@ const Auth = {
     },
 
     async logout() {
-        localStorage.removeItem('authToken');
-        window.location.href = './login.html';
+        try {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            if (typeof sessionStorage !== 'undefined') {
+                sessionStorage.clear();
+            }
+        } finally {
+            // Use replace to avoid going back to a protected page via history
+            window.location.replace('./login.html');
+        }
     },
 
     isAuthenticated() {
-        return localStorage.getItem('authToken') !== null;
+        return localStorage.getItem('token') !== null;
     }
 };
 
@@ -525,6 +533,30 @@ function showEditModal(fieldName, inputType, currentValue) {
     }, 100);
 }
 
+// ========================================
+// AUTH GUARD & LOGOUT WIRING
+// ========================================
+
+function isProtectedPage() {
+    const path = window.location.pathname.toLowerCase();
+    return path.endsWith('/dashboard.html') || path.endsWith('/profile.html');
+}
+
+function enforceAuthGuard() {
+    if (isProtectedPage() && !Auth.isAuthenticated()) {
+        window.location.href = './login.html';
+    }
+}
+
+function wireLogout() {
+    const btn = document.getElementById('logoutBtn');
+    if (btn) {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            Auth.logout();
+        });
+    }
+}
 
 // ========================================
 // INITIALIZATION
@@ -537,4 +569,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeForms();
     registerServiceWorker();
     initializePWAPrompt();
+    enforceAuthGuard();
+    wireLogout();
 });
