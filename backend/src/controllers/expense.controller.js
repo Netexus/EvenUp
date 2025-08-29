@@ -2,6 +2,8 @@ const { validationResult } = require('express-validator');
 const Expense = require('../models/expense.model');
 const Participants = require('../models/expenseParticipants.model');
 const pool = require('../config/database');
+const ExpensesSummaryModel = require('../models/expense.model');
+const ExpenseDetailModel = require('../models/expense.model');
 
 // Create an expense (optionally with participants array)
 exports.createExpense = async (req, res) => {
@@ -140,3 +142,51 @@ exports.deleteParticipant = async (req, res) => {
     return res.status(500).json({ message: 'Error deleting participant' });
   }
 };
+
+const ExpensesSummaryController = {
+  getExpensesByGroupForUser: async (req, res) => {
+    try {
+      const { groupId } = req.params;
+      const { userId } = req.query; // O mejor desde req.user si usas JWT
+
+      if (!userId) {
+        return res.status(400).json({ error: "User ID is required" });
+      }
+
+      const expenses = await ExpensesSummaryModel.getExpensesByGroupForUser(groupId, userId);
+
+      if (!expenses.length) {
+        return res.status(404).json({ error: "No expenses found for this group or user" });
+      }
+
+      res.json(expenses);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Error fetching expenses summary" });
+    }
+  }
+};
+
+const ExpenseDetailController = {
+  getExpenseDetail: async (req, res) => {
+    try {
+      const { id } = req.params; // expense_id
+
+      const expense = await ExpenseDetailModel.getExpenseDetail(id);
+
+      if (!expense) {
+        return res.status(404).json({ error: 'Expense not found' });
+      }
+
+      res.json(expense);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: 'Error fetching expense detail' });
+    }
+  }
+};
+
+module.exports = ExpenseDetailController;
+module.exports = ExpensesSummaryController;
+
+

@@ -6,6 +6,8 @@ const expenseGroupRoutes = require('./routes/expenseGroup.routes');
 const userRoutes = require('./routes/user.routes');
 const expenseRoutes = require('./routes/expense.routes');
 const authRoutes = require('./routes/auth.routes');
+const groupMembershipsRoutes = require('./routes/groupMemberships.routes');
+
 
 // Initialize Express app
 const app = express();
@@ -28,6 +30,7 @@ app.use('/api/settlements', settlementRoutes);
 app.use('/api/expense_groups', expenseGroupRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/expenses', expenseRoutes);
+app.use('/api/memberships', groupMembershipsRoutes);
 
 // Health check endpoint
 app.get('/', (req, res) => {
