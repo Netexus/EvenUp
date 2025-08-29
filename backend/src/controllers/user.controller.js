@@ -42,6 +42,22 @@ exports.createUser = async (req, res) => {
     }
 };
 
+// Search users by username or email
+exports.searchUsers = async (req, res) => {
+    try {
+        const { query = '', limit = 10 } = req.query;
+        if (!query || String(query).trim().length < 2) {
+            return res.json([]);
+        }
+        const [rows] = await User.search(String(query).trim(), Number(limit) || 10);
+        res.json(rows);
+    } catch (error) {
+        res.status(500).json({ error: 'Error searching users',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+};
+
 // Get all users
 exports.getUsers = async (req, res) => {
     try {

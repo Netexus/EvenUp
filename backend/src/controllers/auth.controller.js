@@ -1,4 +1,5 @@
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const pool = require('../config/database');
 
 exports.register = async (req, res) => {
@@ -30,10 +31,10 @@ exports.register = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Insertar usuario
+        // Insertar usuario (incluye birthdate requerido por el esquema)
         const [result] = await pool.query(
-            'INSERT INTO app_users (name, username, phone, email, password_hash) VALUES (?, ?, ?, ?, ?)',
-            [fullName, username, phoneNumber, email, hashedPassword]
+            'INSERT INTO app_users (name, username, phone, email, birthdate, password_hash) VALUES (?, ?, ?, ?, ?, ?)',
+            [fullName, username, phoneNumber, email, birthDate, hashedPassword]
         );
 
         res.status(201).json({
@@ -59,59 +60,44 @@ exports.login = async (req, res) => {
     try {
         const { username, password } = req.body;
 
-        // Validar datos
+        // Validate
         if (!username || !password) {
-            return res.status(400).json({
-                status: 'error',
-                message: 'Username and password are required'
-            });
+            return res.status(400).json({ status: 'error', message: 'Username and password are required' });
         }
 
-        // Buscar usuario
-        const [users] = await pool.query(
-            'SELECT * FROM app_users WHERE username = ?',
-            [username]
-        );
-
+        // Find user
+        const [users] = await pool.query('SELECT * FROM app_users WHERE username = ?', [username]);
         if (users.length === 0) {
-            return res.status(401).json({
-                status: 'error',
-                message: 'Invalid credentials'
-            });
+            return res.status(401).json({ status: 'error', message: 'Invalid credentials' });
         }
 
         const user = users[0];
 
-        // Verificar contraseña
+        // Verify password
         const isMatch = await bcrypt.compare(password, user.password_hash);
         if (!isMatch) {
-            return res.status(401).json({
-                status: 'error',
-                message: 'Invalid credentials'
-            });
+            return res.status(401).json({ status: 'error', message: 'Invalid credentials' });
         }
 
-        // Generar token (en una implementación real, usarías JWT aquí)
-        const token = 'temp_token_' + Math.random().toString(36).slice(2);
+        // Sign JWT (2 days)
+        const token = jwt.sign(
+            { id: user.user_id, username: user.username, email: user.email },
+            process.env.JWT_SECRET,
+            { expiresIn: '2d' }
+        );
 
-        res.json({
-            status: 'success',
-            message: 'Login successful',
-            data: {
-                token,
-                user: {
-                    id: user.user_id,
-                    username: user.username,
-                    email: user.email,
-                    fullName: user.name
-                }
+        // Return top-level token and user
+        return res.json({
+            token,
+            user: {
+                id: user.user_id,
+                username: user.username,
+                email: user.email,
+                fullName: user.name
             }
         });
     } catch (error) {
         console.error('Error in login:', error);
-        res.status(500).json({
-            status: 'error',
-            message: 'Error logging in'
-        });
+        res.status(500).json({ status: 'error', message: 'Error logging in' });
     }
 };
