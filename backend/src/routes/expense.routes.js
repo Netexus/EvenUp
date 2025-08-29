@@ -57,4 +57,10 @@ router.get('/summary/:groupId', ExpensesSummaryController.getExpensesByGroupForU
 // GET /api/expenses/detail/:id
 router.get('/detail/:id', ExpenseDetailController.getExpenseDetail);
 
+// GET /api/expenses/summary/:groupId?userId=1
+router.get('/summary/:groupId', ExpensesSummaryController.getExpensesByGroupForUser);
+
+// GET /api/expenses/detail/:id
+router.get('/detail/:id', ExpenseDetailController.getExpenseDetail);
+
 module.exports = router;

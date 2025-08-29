@@ -33,30 +33,30 @@ const ExpenseGroup = {
   },
 
   async createTrip(data) {
-    const { group_name, created_by, origin, destination, departure, trip_return } = data;
+    const { group_name, created_by, origin, destination, departure, trip_return, category } = data;
     const [result] = await pool.query(
-      'INSERT INTO expense_groups (group_name, created_by, origin, destination, departure, trip_return) VALUES (?, ?, ?, ?, ?, ?)',
-      [group_name, created_by, origin, destination, departure, trip_return]
+      'INSERT INTO expense_groups (group_name, created_by, origin, destination, departure, trip_return, category) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [group_name, created_by, origin, destination, departure, trip_return, category]
     );
     const [rows] = await pool.query('SELECT * FROM expense_groups WHERE group_id = ?', [result.insertId]);
     return rows[0];
   },
 
   async createRelationship(data) {
-    const { group_name, created_by, income_1, income_2 } = data;
+    const { group_name, created_by, income_1, income_2, category } = data;
     const [result] = await pool.query(
-      'INSERT INTO expense_groups (group_name, created_by, income_1, income_2) VALUES (?, ?, ?, ?)',
-      [group_name, created_by, income_1, income_2]
+      'INSERT INTO expense_groups (group_name, created_by, income_1, income_2, category) VALUES (?, ?, ?, ?, ?)',
+      [group_name, created_by, income_1, income_2, category]
     );
     const [rows] = await pool.query('SELECT * FROM expense_groups WHERE group_id = ?', [result.insertId]);
     return rows[0];
   },
 
   async createOther(data) {
-    const { group_name, created_by } = data;
+    const { group_name, created_by, category } = data;
     const [result] = await pool.query(
-      'INSERT INTO expense_groups (group_name, created_by) VALUES (?, ?)',
-      [group_name, created_by]
+      'INSERT INTO expense_groups (group_name, created_by, category) VALUES (?, ?, ?)',
+      [group_name, created_by, category]
     );
     const [rows] = await pool.query('SELECT * FROM expense_groups WHERE group_id = ?', [result.insertId]);
     return rows[0];

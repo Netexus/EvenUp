@@ -56,4 +56,64 @@ const Expense = {
   }
 };
 
+const ExpensesSummaryModel = {
+  getExpensesByGroupForUser: async (groupId, userId) => {
+    const query = `
+      SELECT
+        e.expense_name,
+        u.name AS paid_by_user,
+        e.date,
+        e.amount,
+        e.category,
+        CASE
+          WHEN e.paid_by = ? THEN e.amount - COALESCE(ep.share_amount, 0)
+          ELSE COALESCE(ep.share_amount, 0)
+        END AS user_contribution
+      FROM expenses AS e
+      JOIN app_users AS u
+        ON e.paid_by = u.user_id
+      LEFT JOIN expense_participants AS ep
+        ON e.expense_id = ep.expense_id AND ep.user_id = ?
+      WHERE e.group_id = ?
+      ORDER BY e.date DESC;
+    `;
+
+    const [rows] = await pool.query(query, [userId, userId, groupId]);
+    return rows;
+  }
+};
+
+const ExpenseDetailModel = {
+  getExpenseDetail: async (expenseId) => {
+    const query = `
+      SELECT
+        e.expense_name,
+        e.amount,
+        e.date,
+        e.description,
+        e.category,
+        u.name AS paid_by_user,
+        GROUP_CONCAT(
+          CONCAT(au.name, ': ', ep.share_amount)
+          ORDER BY au.name SEPARATOR ', '
+        ) AS participants_and_shares
+      FROM expenses AS e
+      JOIN app_users AS u
+        ON e.paid_by = u.user_id
+      JOIN expense_participants AS ep
+        ON e.expense_id = ep.expense_id
+      JOIN app_users AS au
+        ON ep.user_id = au.user_id
+      WHERE e.expense_id = ?
+      GROUP BY
+        e.expense_id, e.expense_name, e.amount, e.date, e.description, e.category, u.name;
+    `;
+
+    const [rows] = await pool.query(query, [expenseId]);
+    return rows[0];
+  }
+};
+
+module.exports = ExpenseDetailModel;
+module.exports = ExpensesSummaryModel;
 module.exports = Expense;
