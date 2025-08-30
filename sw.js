@@ -3,21 +3,22 @@
  * Handles caching, offline functionality, and background sync
  */
 
-const CACHE_NAME = 'evenup-v1.0.0';
+const CACHE_NAME = 'evenup-v1.0.1';
 const urlsToCache = [
-    './frontend/index.html',
-    './frontend/login.html',
-    './frontend/signup.html',
-    './frontend/profile.html',
-    './frontend/dashboard.html',
-    './frontend/css/styles.css',
-    './frontend/js/main.js',
-    './frontend/js/pwa.js',
-    './frontend/media/icons/evenup.ico',
-    './frontend/media/evenup.png',
-    './frontend/media/hero_image.jpg',
-    './frontend/media/icons/evenup-192x192.png',
-    './frontend/media/icons/evenup-512x512.png',
+    '/',
+    '/index.html',
+    '/login.html',
+    '/signup.html',
+    '/profile.html',
+    '/dashboard.html',
+    '/css/styles.css',
+    '/js/main.js',
+    '/js/pwa.js',
+    '/media/icons/evenup.ico',
+    '/media/evenup.png',
+    '/media/hero_image.jpg',
+    '/media/icons/evenup-192x192.png',
+    '/media/icons/evenup-512x512.png',
     'https://cdnjs.cloudflare.com/ajax/libs/bulma/0.9.4/css/bulma.min.css',
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
     'https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap'
@@ -95,7 +96,7 @@ self.addEventListener('fetch', event => {
             })
             .catch(() => {
                 if (event.request.destination === 'document') {
-                    return caches.match('./index.html');
+                    return caches.match('/index.html');
                 }
             })
     );

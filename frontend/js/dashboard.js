@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
 /**
  * Helper and context 
  */
-const API_BASE = '/api';
+const API_BASE = (typeof window !== 'undefined' && window.API_BASE) ? window.API_BASE : '/api';
 // Prefer AuthHelper token, fallback to legacy key 'token'
 const authToken = () => (window.AuthHelper && AuthHelper.getToken && AuthHelper.getToken()) || localStorage.getItem('token') || '';
 // Prefer persisted 'user' from login flow
