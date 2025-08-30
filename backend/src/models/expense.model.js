@@ -114,6 +114,20 @@ const ExpenseDetailModel = {
   }
 };
 
+const GroupMembersModel = {
+  async getGroupMembers(groupId) {
+    const [rows] = await pool.execute(
+      `SELECT u.user_id AS id, u.name, u.username, u.email
+       FROM app_users u
+       JOIN group_memberships gm ON u.user_id = gm.user_id
+       WHERE gm.group_id = ?`,
+      [groupId]
+    );
+    return rows;
+  }
+};
+
 module.exports = ExpenseDetailModel;
 module.exports = ExpensesSummaryModel;
 module.exports = Expense;
+module.exports = GroupMembersModel;

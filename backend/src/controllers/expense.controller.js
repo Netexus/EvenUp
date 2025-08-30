@@ -4,6 +4,7 @@ const Participants = require('../models/expenseParticipants.model');
 const pool = require('../config/database');
 const ExpensesSummaryModel = require('../models/expense.model');
 const ExpenseDetailModel = require('../models/expense.model');
+const GroupMembersModel = require('../models/expense.model'); // Importa el modelo de miembros
 
 // Create an expense (optionally with participants array)
 const createExpense = async (req, res) => {
@@ -186,6 +187,17 @@ const ExpenseDetailController = {
   }
 };
 
+// Añade la función para obtener los miembros del grupo
+const getGroupMembers = async (req, res) => {
+  const groupId = req.params.groupId;
+  try {
+    const members = await GroupMembersModel.getGroupMembers(groupId);
+    res.json(members);
+  } catch (err) {
+    res.status(500).json({ error: 'Error fetching group members' });
+  }
+};
+
 // Combine all exports
 module.exports = {
   // Main expense operations
@@ -207,5 +219,8 @@ module.exports = {
   
   // Also export the controller objects directly for named imports
   ExpensesSummaryController,
-  ExpenseDetailController
+  ExpenseDetailController,
+
+  // Exporta la función de miembros del grupo
+  getGroupMembers
 };
