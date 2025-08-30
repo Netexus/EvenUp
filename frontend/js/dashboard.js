@@ -91,6 +91,7 @@ const user = {
 };
 
 let currentGroup = null;
+let groupMembers = [];
 
 // ========================================
 // NAVIGATION MANAGEMENT
@@ -362,18 +363,15 @@ function closeAddPaymentModal() {
 /**
  * Shows the add expense modal and populates member lists.
  */
-function showAddExpenseModal() {
+async function showAddExpenseModal() {
     const modal = document.getElementById('addExpenseModal');
-    if (modal) {
-        const members = (currentGroup && currentGroup.members) || [];
-        if (members.length < 2) {
-          showNotification('Add at least one more member to create expenses.', 'error');
-          return;
-        }
-        populateMemberSelects('expenseMembers', members);
-        handleSplitMethodChange();
-        modal.classList.add('is-active');
+    const groupId = getActiveGroupId();
+    if (!groupId) {
+        showNotification('No hay grupo activo.', 'error');
+        return;
     }
+    await prepareAddExpenseModal(groupId);
+    if (modal) modal.classList.add('is-active');
 }
 
 /**
@@ -493,16 +491,30 @@ function handleSplitMethodChange() {
 
 
 /**
- * Populates a select dropdown with member options.
- * @param {string} selectId - The ID of the select element.
- * @param {object[]} members - An array of member objects.
+ * Llena el select de "Paid by" con los miembros del grupo.
+ * @param {Array} members - Array de miembros.
+ */
+function populatePaidBySelect(members) {
+    const paidBySelect = document.getElementById('expensePaidBy');
+    if (!paidBySelect) return;
+    paidBySelect.innerHTML = '';
+    members.forEach(member => {
+        const option = document.createElement('option');
+        option.value = member.id;
+        option.textContent = member.name;
+        paidBySelect.appendChild(option);
+    });
+}
+
+/**
+ * Llena el select de participantes del gasto.
+ * @param {string} selectId - ID del select.
+ * @param {Array} members - Array de miembros.
  */
 function populateMemberSelects(selectId, members) {
     const select = document.getElementById(selectId);
     if (!select) return;
-    
     select.innerHTML = '';
-    
     members.forEach(member => {
         const option = document.createElement('option');
         option.value = member.id;
@@ -781,7 +793,6 @@ async function addPayment() {
 }
 
 
-
 // ========================================
 // UTILITY FUNCTIONS (Reused from main.js)
 // ========================================
@@ -897,4 +908,56 @@ function toggleTheme() {
     if (metaThemeColor) {
         metaThemeColor.setAttribute('content', newTheme === 'dark' ? '#0f172a' : '#4DF7EC');
     }
+}
+
+// ========================================
+// GROUP MEMBERS FETCHING & USAGE
+// ========================================
+
+/**
+ * Obtiene los miembros del grupo desde el backend y actualiza el estado global.
+ * @param {number} groupId - El ID del grupo.
+ * @returns {Promise<Array>} - Array de miembros del grupo.
+ */
+async function fetchGroupMembers(groupId) {
+    try {
+        // Ajusta la URL si tu backend usa /api/expenses/group/:groupId/members
+        const members = await apiFetch(`/expenses/group/${groupId}/members`);
+        groupMembers = Array.isArray(members) ? members : [];
+        return groupMembers;
+    } catch (err) {
+        showNotification('No se pudieron cargar los miembros del grupo', 'error');
+        groupMembers = [];
+        return [];
+    }
+}
+
+/**
+ * Llama a fetchGroupMembers y actualiza los selects del modal de gastos.
+ * @param {number} groupId - El ID del grupo.
+ */
+async function prepareAddExpenseModal(groupId) {
+    const members = await fetchGroupMembers(groupId);
+    console.log('Miembros recibidos:', members);
+    if (members.length < 1) {
+        showNotification('No hay miembros en el grupo.', 'error');
+        return;
+    }
+    populateMemberSelects('expenseMembers', members);
+    populatePaidBySelect(members);
+    handleSplitMethodChange();
+}
+
+/**
+ * Muestra el modal de agregar gasto y prepara los selects con los miembros.
+ */
+async function showAddExpenseModal() {
+    const modal = document.getElementById('addExpenseModal');
+    const groupId = getActiveGroupId();
+    if (!groupId) {
+        showNotification('No hay grupo activo.', 'error');
+        return;
+    }
+    await prepareAddExpenseModal(groupId);
+    if (modal) modal.classList.add('is-active');
 }
