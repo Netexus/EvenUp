@@ -111,6 +111,51 @@ function checkAuth() {
         window.location.href = './dashboard.html';
     }
 }
+// Archivo: js/auth.js
+
+(function() {
+    'use strict';
+
+    // Asegúrate de que esta URL coincida con la de tu servidor Node.js
+    const API_BASE_URL = 'http://localhost:3000';
+
+    window.Auth = {
+        async getCurrentUser() {
+            try {
+                // En un proyecto real, aquí se usaría un token para la autenticación
+                const response = await fetch(`${API_BASE_URL}/api/profile`);
+                if (!response.ok) {
+                    throw new Error(`Error del servidor: ${response.status}`);
+                }
+                const userData = await response.json();
+                console.log('Datos del servidor recibidos:', userData);
+                return userData;
+            } catch (error) {
+                console.error('Error al obtener el perfil del usuario:', error);
+                return null;
+            }
+        },
+
+        async updateUserProfile(data) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/profile/update`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                if (!response.ok) {
+                    throw new Error(`Error del servidor: ${response.status}`);
+                }
+                return await response.json();
+            } catch (error) {
+                console.error('Error al actualizar el perfil del usuario:', error);
+                return null;
+            }
+        }
+    };
+})();
 
 // Export functions
 window.Auth = {
