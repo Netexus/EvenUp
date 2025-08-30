@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
 /**
  * Helper and context 
  */
-const API_BASE = (typeof window !== 'undefined' && window.API_BASE) ? window.API_BASE : '/api';
+const API_BASE_DASH = (typeof window !== 'undefined' && window.API_BASE) ? window.API_BASE : '/api';
 // Prefer AuthHelper token, fallback to legacy key 'token'
 const authToken = () => (window.AuthHelper && AuthHelper.getToken && AuthHelper.getToken()) || localStorage.getItem('token') || '';
 // Prefer persisted 'user' from login flow
@@ -44,7 +44,7 @@ const CURRENT_USER_ID = () => (currentUser()?.id || currentUser()?.user_id || 0)
 const CURRENT_USERNAME = () => (currentUser()?.username || '');
 
 async function apiFetch(path, { method = 'GET', body } = {}) {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(`${API_BASE_DASH}${path}`, {
     method,
     headers: {
       'Content-Type': 'application/json',
