@@ -140,6 +140,7 @@ function renderGroupsGrid(container, groups, statsById = {}) {
   const $root = typeof container === 'string' ? document.querySelector(container) : container;
   if (!$root) return console.error('Container not found');
 
+  // Mantén referencia global para resolver clics por id
   window.__GROUPS__ = groups || [];
 
   const cardsHTML = (groups || []).map((groupData) => {
@@ -178,7 +179,7 @@ function renderGroupsGrid(container, groups, statsById = {}) {
           </div>
         </div>
       </div>
-    `
+    `;
   }).join('');
 
   $root.innerHTML = cardsHTML || '<p>No groups yet.</p>';

@@ -26,8 +26,9 @@ const expenseGroupController = {
 
   getGroupDetails: async (req, res) => {
     try {
-      const group = await ExpenseGroupModel.getGroupDetails(req.params.id);
-      res.json(group);
+      const { id: userId } = req.user || {};
+      const details = await ExpenseGroupModel.getGroupDetails(req.params.id, userId || null);
+      res.json(details);
     } catch (error) {
       res.status(500).json({ error: 'Error fetching group details' });
     }
