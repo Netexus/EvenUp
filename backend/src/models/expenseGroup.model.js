@@ -31,8 +31,8 @@ const ExpenseGroup = {
         eg.group_id,
         eg.group_name,
         COUNT(DISTINCT gm.user_id) AS num_members,
-        IFNULL(SUM(e.amount), 0) AS total_spent,
-        IFNULL(ub.net, 0) AS user_balance
+        COALESCE(SUM(e.amount), 0) AS total_spent,
+        COALESCE(ub.net, 0) AS user_balance
       FROM expense_groups eg
       LEFT JOIN group_memberships gm ON eg.group_id = gm.group_id
       LEFT JOIN expenses e ON eg.group_id = e.group_id
