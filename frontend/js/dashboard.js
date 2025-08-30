@@ -898,3 +898,18 @@ function toggleTheme() {
         metaThemeColor.setAttribute('content', newTheme === 'dark' ? '#0f172a' : '#4DF7EC');
     }
 }
+
+// Expose functions for inline handlers in dashboard.html
+try {
+  window.showCreateGroupModal = showCreateGroupModal;
+  window.closeCreateGroupModal = closeCreateGroupModal;
+  window.showAddPaymentModal = showAddPaymentModal;
+  window.closeAddPaymentModal = closeAddPaymentModal;
+  window.showAddExpenseModal = showAddExpenseModal;
+  window.closeAddExpenseModal = closeAddExpenseModal;
+  window.createGroup = createGroup;
+  window.addExpense = addExpense;
+  window.addPayment = addPayment;
+  window.showDashboard = showDashboard;
+  window.toggleTheme = window.toggleTheme || toggleTheme;
+} catch (_) {}
