@@ -93,7 +93,9 @@ exports.login = async (req, res) => {
                 id: user.user_id,
                 username: user.username,
                 email: user.email,
-                fullName: user.name
+                fullName: user.name,
+                phoneNumber: user.phone,
+                birthDate: user.birthdate
             }
         });
     } catch (error) {

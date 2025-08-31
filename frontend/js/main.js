@@ -433,6 +433,33 @@ function showUpdatePrompt() {
 // PROFILE MANAGEMENT
 // ========================================
 
+function loadProfileData() {
+    try {
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (!user) {
+            console.error('No user data found in localStorage');
+            return;
+        }
+
+        // Actualizar la interfaz con los datos del usuario
+        if (document.getElementById('userFullName')) {
+            document.getElementById('userFullName').textContent = user.fullName || 'Not set';
+        }
+        if (document.getElementById('userEmail')) {
+            document.getElementById('userEmail').textContent = user.email || 'Not set';
+        }
+        if (document.getElementById('userPhone')) {
+            document.getElementById('userPhone').textContent = user.phoneNumber || 'Not set';
+        }
+        if (document.getElementById('userBirthDate')) {
+            const birthDate = user.birthDate ? new Date(user.birthDate).toLocaleDateString() : 'Not set';
+            document.getElementById('userBirthDate').textContent = birthDate;
+        }
+    } catch (error) {
+        console.error('Error loading profile data:', error);
+    }
+}
+
 function uploadProfilePicture() {
     const input = document.createElement('input');
     input.type = 'file';
@@ -572,4 +599,9 @@ document.addEventListener('DOMContentLoaded', () => {
     initializePWAPrompt();
     enforceAuthGuard();
     wireLogout();
+
+    // Cargar datos del perfil si estamos en la página de perfil
+    if (window.location.pathname.endsWith('profile.html')) {
+        loadProfileData();
+    }
 });
