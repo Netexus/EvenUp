@@ -751,6 +751,30 @@ async function createGroup() {
     // POST to backend
     const created = await apiFetch(path, { method: 'POST', body });
 
+    function addPaymentLegacy() {
+    const from = document.getElementById('paymentFrom').value;
+    const to = document.getElementById('paymentTo').value;
+    const amount = document.getElementById('paymentAmount').value;
+
+    if (!from || !to || !amount) {
+        showNotification('Please fill in all fields.', 'error');
+        return;
+    }
+
+    if (from === to) {
+        showNotification('Cannot make a payment to yourself.', 'error');
+        return;
+    }
+
+    // Simulate payment logic
+    console.log(`Adding payment: ${from} paid $${amount} to ${to}`);
+    showNotification('Payment added successfully!', 'success');
+    closeAddPaymentModal();
+}
+
+/**
+ * Handles the submission of the add expense form.
+ */
     // Create creator membership with admin role (owner)
     const newGroupId = created.group_id || created.id;
     if (newGroupId && CURRENT_USER_ID()) {
