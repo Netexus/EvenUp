@@ -11,7 +11,8 @@ const {
   updateParticipant,
   deleteParticipant,
   ExpensesSummaryController,
-  ExpenseDetailController
+  ExpenseDetailController,
+  getGroupMembers
 } = require('../controllers/expense.controller');
 const v = require('../middleware/validators');
 
@@ -51,11 +52,8 @@ router.put('/:id/participants/:participantId', v.updateParticipantValidation, up
 // Delete a participant from an expense
 router.delete('/:id/participants/:participantId', deleteParticipant);
 
-// GET /api/expenses/summary/:groupId?userId=1
-router.get('/summary/:groupId', ExpensesSummaryController.getExpensesByGroupForUser);
-
-// GET /api/expenses/detail/:id
-router.get('/detail/:id', ExpenseDetailController.getExpenseDetail);
+// Obtener miembros de un grupo
+router.get('/group/:groupId/members', getGroupMembers);
 
 // GET /api/expenses/summary/:groupId?userId=1
 router.get('/summary/:groupId', ExpensesSummaryController.getExpensesByGroupForUser);

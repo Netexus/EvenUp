@@ -91,6 +91,7 @@ const user = {
 };
 
 let currentGroup = null;
+let groupMembers = [];
 
 // ========================================
 // NAVIGATION MANAGEMENT
