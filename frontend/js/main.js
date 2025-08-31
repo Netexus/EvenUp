@@ -428,15 +428,42 @@ function showUpdatePrompt() {
         document.body.removeChild(updateBanner);
     });
 }
-
-// ========================================
 // PROFILE MANAGEMENT
 // ========================================
+
+function loadProfileData() {
+    try {
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (!user) {
+            console.error('No user data found in localStorage');
+            return;
+        }
+
+        // Actualizar la interfaz con los datos del usuario
+        if (document.getElementById('userFullName')) {
+            document.getElementById('userFullName').textContent = user.fullName || 'Not set';
+        }
+        if (document.getElementById('userEmail')) {
+            document.getElementById('userEmail').textContent = user.email || 'Not set';
+        }
+        if (document.getElementById('username')) {
+            document.getElementById('username').textContent = user.username || 'Not set';
+        }
+        if (document.getElementById('userPhone')) {
+            document.getElementById('userPhone').textContent = user.phoneNumber || 'Not set';
+        }
+        if (document.getElementById('userBirthDate')) {
+            const birthDate = user.birthDate ? new Date(user.birthDate).toLocaleDateString() : 'Not set';
+            document.getElementById('userBirthDate').textContent = birthDate;
+        }
+    } catch (error) {
+        console.error('Error loading profile data:', error);
+    }
+}
 
 function uploadProfilePicture() {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = 'image/*';
 
     input.addEventListener('change', (e) => {
         const file = e.target.files[0];
@@ -481,7 +508,13 @@ function editBirthDate() {
 }
 
 function editUsername() {
-    showEditModal('Username', 'text', 'pegasso-admin');
+    try {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const current = user.username || '';
+        showEditModal('Username', 'text', current || 'username');
+    } catch (e) {
+        showEditModal('Username', 'text', '');
+    }
 }
 
 function showEditModal(fieldName, inputType, currentValue) {
@@ -572,4 +605,9 @@ document.addEventListener('DOMContentLoaded', () => {
     initializePWAPrompt();
     enforceAuthGuard();
     wireLogout();
+
+    // Cargar datos del perfil si estamos en la página de perfil
+    if (window.location.pathname.endsWith('profile.html')) {
+        loadProfileData();
+    }
 });
