@@ -91,6 +91,7 @@ const user = {
 };
 
 let currentGroup = null;
+let groupMembers = [];
 
 // ========================================
 // NAVIGATION MANAGEMENT
@@ -215,54 +216,49 @@ async function loadAndShowGroupDetails(groupId) {
 
 // Create expense with optional participants and refresh details
 async function addExpense() {
-  const group_id = getActiveGroupId();
-  const expense_name = (document.getElementById('expenseName')?.value || '').trim();
-  const description = (document.getElementById('expenseDescription')?.value || '').trim();
-  const category = (document.getElementById('expenseCategory')?.value || '').trim();
-  const date = document.getElementById('expenseDate')?.value;
-  const amount = parseFloat(document.getElementById('expenseAmount')?.value);
-  const paid_by = CURRENT_USER_ID();
-  const membersSelect = document.getElementById('expenseMembers');
-  const method = document.querySelector('input[name="splitMethod"]:checked')?.value || 'equitable';
+    const group_id = getActiveGroupId();
+    const expense_name = (document.getElementById('expenseName')?.value || '').trim();
+    const description = (document.getElementById('expenseDescription')?.value || '').trim();
+    const category = (document.getElementById('expenseCategory')?.value || '').trim();
+    const date = document.getElementById('expenseDate')?.value;
+    const amount = parseFloat(document.getElementById('expenseAmount')?.value);
+    const paid_by = Number(document.getElementById('expensePaidBy')?.value);
 
-  if (!group_id) return showNotification('No active group selected.', 'error');
-  if (!expense_name || !date || isNaN(amount) || amount <= 0) return showNotification('Please fill all expense fields with valid values.', 'error');
-  if (!membersSelect) return showNotification('Members list not ready.', 'error');
+    // Obtén los participantes seleccionados
+    const checkboxes = document.querySelectorAll('#expenseMembersCheckboxes input[type="checkbox"]:checked');
+    const selectedIds = Array.from(checkboxes).map(cb => Number(cb.value));
+    if (!selectedIds.length) return showNotification('Select at least one participant.', 'error');
 
-  const selectedIds = Array.from(membersSelect.options).filter(o => o.selected).map(o => Number(o.value));
-  if (!selectedIds.length) return showNotification('Select at least one participant.', 'error');
+    const method = document.querySelector('input[name="splitMethod"]:checked')?.value || 'equitable';
 
-  let participants = [];
-  if (method === 'equitable') {
-    const per = Math.round((amount / selectedIds.length) * 100) / 100;
-    participants = selectedIds.map(uid => ({ user_id: uid, share_amount: per }));
-  } else {
-    const inputs = Array.from(document.querySelectorAll('#percentageInputs input'));
-    const membersOrder = ((currentGroup && currentGroup.members) || []).map(m => m.id);
-    // Sum only selected participants' percentages
-    const selectedPercents = selectedIds.map(uid => {
-      const idx = membersOrder.indexOf(uid);
-      const val = parseFloat(inputs[idx]?.value || '0');
-      return isNaN(val) ? 0 : val;
-    });
-    const sumPct = selectedPercents.reduce((a,b)=>a+b,0);
-    if (Math.round(sumPct) !== 100) return showNotification('Percentages must sum to 100% for selected members', 'error');
-    participants = selectedIds.map((uid) => {
-      const idx = membersOrder.indexOf(uid);
-      const pct = parseFloat(inputs[idx]?.value || '0');
-      const share = Math.round((amount * ((isNaN(pct)?0:pct)/100)) * 100) / 100;
-      return { user_id: uid, share_amount: share };
-    });
-  }
+    let participants = [];
+    if (method === 'equitable') {
+        const per = Math.round((amount / selectedIds.length) * 100) / 100;
+        participants = selectedIds.map(uid => ({ user_id: uid, share_amount: per }));
+    } else {
+        const inputs = Array.from(document.querySelectorAll('#percentageInputs input'));
+        const membersOrder = selectedIds;
+        const selectedPercents = selectedIds.map((uid, idx) => {
+            const val = parseFloat(inputs[idx]?.value || '0');
+            return isNaN(val) ? 0 : val;
+        });
+        const sumPct = selectedPercents.reduce((a,b)=>a+b,0);
+        if (Math.round(sumPct) !== 100) return showNotification('Percentages must sum to 100% for selected members', 'error');
+        participants = selectedIds.map((uid, idx) => {
+            const pct = parseFloat(inputs[idx]?.value || '0');
+            const share = Math.round((amount * ((isNaN(pct)?0:pct)/100)) * 100) / 100;
+            return { user_id: uid, share_amount: share };
+        });
+    }
 
-  try {
-    await apiFetch('/expenses', { method: 'POST', body: { group_id, paid_by, amount, description, category, date, expense_name, participants } });
-    showNotification('Expense created successfully!', 'success');
-    closeAddExpenseModal();
-    await loadAndShowGroupDetails(group_id);
-  } catch (err) {
-    showNotification(err.message, 'error');
-  }
+    try {
+        await apiFetch('/expenses', { method: 'POST', body: { group_id, paid_by, amount, description, category, date, expense_name, participants } });
+        showNotification('Expense created successfully!', 'success');
+        closeAddExpenseModal();
+        await loadAndShowGroupDetails(group_id);
+    } catch (err) {
+        showNotification(err.message, 'error');
+    }
 }
 
 
@@ -362,18 +358,15 @@ function closeAddPaymentModal() {
 /**
  * Shows the add expense modal and populates member lists.
  */
-function showAddExpenseModal() {
+async function showAddExpenseModal() {
     const modal = document.getElementById('addExpenseModal');
-    if (modal) {
-        const members = (currentGroup && currentGroup.members) || [];
-        if (members.length < 2) {
-          showNotification('Add at least one more member to create expenses.', 'error');
-          return;
-        }
-        populateMemberSelects('expenseMembers', members);
-        handleSplitMethodChange();
-        modal.classList.add('is-active');
+    const groupId = getActiveGroupId();
+    if (!groupId) {
+        showNotification('No hay grupo activo.', 'error');
+        return;
     }
+    await prepareAddExpenseModal(groupId);
+    if (modal) modal.classList.add('is-active');
 }
 
 /**
@@ -493,21 +486,49 @@ function handleSplitMethodChange() {
 
 
 /**
- * Populates a select dropdown with member options.
- * @param {string} selectId - The ID of the select element.
- * @param {object[]} members - An array of member objects.
+ * Llena el select de "Paid by" con los miembros del grupo.
+ * @param {Array} members - Array de miembros.
+ */
+function populatePaidBySelect(members) {
+    const paidBySelect = document.getElementById('expensePaidBy');
+    if (!paidBySelect) return;
+    paidBySelect.innerHTML = '';
+    members.forEach(member => {
+        const option = document.createElement('option');
+        option.value = member.id;
+        option.textContent = member.name;
+        paidBySelect.appendChild(option);
+    });
+}
+
+/**
+ * Llena el select de participantes del gasto.
+ * @param {string} selectId - ID del select.
+ * @param {Array} members - Array de miembros.
  */
 function populateMemberSelects(selectId, members) {
     const select = document.getElementById(selectId);
     if (!select) return;
-    
     select.innerHTML = '';
-    
     members.forEach(member => {
         const option = document.createElement('option');
         option.value = member.id;
         option.textContent = member.name;
         select.appendChild(option);
+    });
+}
+
+function populateMembersCheckboxes(members) {
+    const container = document.getElementById('expenseMembersCheckboxes');
+    if (!container) return;
+    container.innerHTML = '';
+    members.forEach(member => {
+        const label = document.createElement('label');
+        label.innerHTML = `
+            <input type="checkbox" value="${member.id}" checked>
+            <span>${member.name}</span>
+        `;
+        container.appendChild(label);
     });
 }
 
@@ -781,7 +802,6 @@ async function addPayment() {
 }
 
 
-
 // ========================================
 // UTILITY FUNCTIONS (Reused from main.js)
 // ========================================
@@ -913,3 +933,54 @@ try {
   window.showDashboard = showDashboard;
   window.toggleTheme = window.toggleTheme || toggleTheme;
 } catch (_) {}
+
+// ========================================
+// GROUP MEMBERS FETCHING & USAGE
+// ========================================
+
+/**
+ * Obtiene los miembros del grupo desde el backend y actualiza el estado global.
+ * @param {number} groupId - El ID del grupo.
+ * @returns {Promise<Array>} - Array de miembros del grupo.
+ */
+async function fetchGroupMembers(groupId) {
+    try {
+        // Ajusta la URL si tu backend usa /api/expenses/group/:groupId/members
+        const members = await apiFetch(`/expenses/group/${groupId}/members`);
+        groupMembers = Array.isArray(members) ? members : [];
+        return groupMembers;
+    } catch (err) {
+        showNotification('No se pudieron cargar los miembros del grupo', 'error');
+        groupMembers = [];
+        return [];
+    }
+}
+
+/**
+ * Llama a fetchGroupMembers y actualiza los selects del modal de gastos.
+ * @param {number} groupId - El ID del grupo.
+ */
+async function prepareAddExpenseModal(groupId) {
+    const members = await fetchGroupMembers(groupId);
+    if (members.length < 1) {
+        showNotification('No hay miembros en el grupo.', 'error');
+        return;
+    }
+    populatePaidBySelect(members);
+    populateMembersCheckboxes(members);
+    handleSplitMethodChange();
+}
+
+/**
+ * Muestra el modal de agregar gasto y prepara los selects con los miembros.
+ */
+async function showAddExpenseModal() {
+    const modal = document.getElementById('addExpenseModal');
+    const groupId = getActiveGroupId();
+    if (!groupId) {
+        showNotification('No hay grupo activo.', 'error');
+        return;
+    }
+    await prepareAddExpenseModal(groupId);
+    if (modal) modal.classList.add('is-active');
+}
