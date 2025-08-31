@@ -572,11 +572,11 @@ function updatePercentageInputs() {
 function populatePaidBySelect(members) {
   const paidBySelect = document.getElementById('expensePaidBy');
   if (!paidBySelect) return;
-  paidBySelect.innerHTML = '';
+  paidBySelect.innerHTML = '<option value="">Select who paid...</option>';
   members.forEach(member => {
       const option = document.createElement('option');
-      option.value = member.id;
-      option.textContent = member.name;
+      option.value = member.id || member.user_id;
+      option.textContent = member.name || member.username || `User ${member.id || member.user_id}`;
       paidBySelect.appendChild(option);
   });
 }
@@ -603,11 +603,13 @@ function populateMembersCheckboxes(members) {
   if (!container) return;
   container.innerHTML = '';
   members.forEach(member => {
+      const memberId = member.id || member.user_id;
+      const memberName = member.name || member.username || `User ${memberId}`;
       const label = document.createElement('label');
       label.className = 'checkbox';
       label.innerHTML = `
-          <input type="checkbox" value="${member.id}">
-          <span>${member.name}</span>
+          <input type="checkbox" value="${memberId}">
+          <span>${memberName}</span>
       `;
       container.appendChild(label);
   });
