@@ -155,25 +155,49 @@ function renderGroupsGrid(groups) {
   (groups || []).forEach(g => {
     const card = document.createElement('div');
     card.className = 'group-card';
-    const name = g.group_name || g.name || `Group ${g.group_id}`;
+    const gid = g.group_id || g.id;
+    const name = g.group_name || g.name || `Group ${gid}`;
+    card.setAttribute('data-group-id', String(gid));
     card.innerHTML = `
       <div class="group-header">
         <div class="group-avatar">${String(name).substring(0,2).toUpperCase()}</div>
         <div class="group-info">
           <h3>${name}</h3>
-          <p></p>
+          <p class="group-sub" style="opacity:.8; font-size: .9rem;">Loading details…</p>
         </div>
       </div>
     `;
-    card.onclick = () => loadAndShowGroupDetails(g.group_id || g.id);
+    card.onclick = () => loadAndShowGroupDetails(gid);
     grid.insertBefore(card, grid.querySelector('.add-group-card'));
+
+    // Fetch and render summary details for this group card
+    (async () => {
+      try {
+        const [memberships, expenses, bal] = await Promise.all([
+          apiFetch(`/memberships/group/${gid}`),
+          apiFetch(`/expenses/group/${gid}`).catch(() => []),
+          apiFetch(`/settlements/balance/group/${gid}/user/${CURRENT_USER_ID()}`).catch(() => ({}))
+        ]);
+        const membersCount = Array.isArray(memberships) ? memberships.length : 0;
+        const totalExpenses = (Array.isArray(expenses) ? expenses : []).reduce((sum, e) => sum + Number(e.amount || 0), 0);
+        const net = Number(bal?.net ?? bal?.balance ?? bal?.amount ?? 0);
+        const owe = net < 0 ? Math.abs(net) : 0;
+        const owed = net > 0 ? net : 0;
+        const balanceText = `You owe $${owe.toFixed(2)} • You're owed $${owed.toFixed(2)}`;
+        const p = card.querySelector('.group-sub');
+        if (p) p.textContent = `${membersCount} members • Total $${totalExpenses.toFixed(2)} • ${balanceText}`;
+      } catch (_) {
+        const p = card.querySelector('.group-sub');
+        if (p) p.textContent = `${name}`;
+      }
+    })();
   });
 }
 // Load group data from backend and navigate to details
 async function loadAndShowGroupDetails(groupId) {
   try {
-    // 1) Basic group info (endpoint returns either a row or an array)
-    let groupInfo = await apiFetch(`/expense_groups/${groupId}`);
+    // 1) Basic group info (endpoint may return a single object)
+    let groupInfo = await apiFetch(`/expense_groups/${groupId}?userId=${encodeURIComponent(CURRENT_USER_ID())}`);
     if (Array.isArray(groupInfo)) groupInfo = groupInfo[0] || {};
 
     // 2) Members
@@ -222,49 +246,115 @@ async function addExpense() {
   const date = document.getElementById('expenseDate')?.value;
   const amount = parseFloat(document.getElementById('expenseAmount')?.value);
   const paid_by = CURRENT_USER_ID();
-  const membersSelect = document.getElementById('expenseMembers');
   const method = document.querySelector('input[name="splitMethod"]:checked')?.value || 'equitable';
 
   if (!group_id) return showNotification('No active group selected.', 'error');
   if (!expense_name || !date || isNaN(amount) || amount <= 0) return showNotification('Please fill all expense fields with valid values.', 'error');
-  if (!membersSelect) return showNotification('Members list not ready.', 'error');
-
-  const selectedIds = Array.from(membersSelect.options).filter(o => o.selected).map(o => Number(o.value));
-  if (!selectedIds.length) return showNotification('Select at least one participant.', 'error');
-
-  let participants = [];
-  if (method === 'equitable') {
-    const per = Math.round((amount / selectedIds.length) * 100) / 100;
-    participants = selectedIds.map(uid => ({ user_id: uid, share_amount: per }));
-  } else {
-    const inputs = Array.from(document.querySelectorAll('#percentageInputs input'));
-    const membersOrder = ((currentGroup && currentGroup.members) || []).map(m => m.id);
-    // Sum only selected participants' percentages
-    const selectedPercents = selectedIds.map(uid => {
-      const idx = membersOrder.indexOf(uid);
-      const val = parseFloat(inputs[idx]?.value || '0');
-      return isNaN(val) ? 0 : val;
-    });
-    const sumPct = selectedPercents.reduce((a,b)=>a+b,0);
-    if (Math.round(sumPct) !== 100) return showNotification('Percentages must sum to 100% for selected members', 'error');
-    participants = selectedIds.map((uid) => {
-      const idx = membersOrder.indexOf(uid);
-      const pct = parseFloat(inputs[idx]?.value || '0');
-      const share = Math.round((amount * ((isNaN(pct)?0:pct)/100)) * 100) / 100;
-      return { user_id: uid, share_amount: share };
-    });
-  }
+  const selectedIds = getSelectedMemberIds();
+  const comp = computeExpenseSplit(amount, selectedIds, method);
+  if (comp.error) return showNotification(comp.error, 'error');
+  const participants = comp.participants;
 
   try {
     await apiFetch('/expenses', { method: 'POST', body: { group_id, paid_by, amount, description, category, date, expense_name, participants } });
     showNotification('Expense created successfully!', 'success');
     closeAddExpenseModal();
     await loadAndShowGroupDetails(group_id);
+    try { await loadUserGroups(); } catch (_) {}
   } catch (err) {
     showNotification(err.message, 'error');
   }
 }
 
+// Helpers for expense split preview and creation
+function getSelectedMemberIds() {
+  const membersSelect = document.getElementById('expenseMembers');
+  if (!membersSelect) return [];
+  return Array.from(membersSelect.options).filter(o => o.selected).map(o => Number(o.value));
+}
+
+function computeExpenseSplit(amount, selectedIds, method) {
+  const res = { participants: [], error: null, sumCents: 0, totalCents: 0 };
+  const totalCents = Math.round(Number(amount || 0) * 100);
+  res.totalCents = totalCents;
+  if (!selectedIds || selectedIds.length === 0) { res.error = 'Select at least one participant.'; return res; }
+  if (!amount || isNaN(amount) || Number(amount) <= 0) { res.error = 'Enter a valid amount.'; return res; }
+
+  if ((method || 'equitable') === 'equitable') {
+    const n = selectedIds.length;
+    const base = Math.floor(totalCents / n);
+    let remainder = totalCents - base * n; // 0..n-1
+    const sharesCents = Array(n).fill(base).map((c, i) => c + (i < remainder ? 1 : 0));
+    res.participants = selectedIds.map((uid, i) => ({ user_id: uid, share_amount: sharesCents[i] / 100 }));
+    res.sumCents = sharesCents.reduce((a,b)=>a+b,0);
+    return res;
+  }
+
+  // percentage split
+  const inputs = Array.from(document.querySelectorAll('#percentageInputs input'));
+  const membersOrder = ((currentGroup && currentGroup.members) || []).map(m => m.id);
+  const pcts = selectedIds.map(uid => {
+    const idx = membersOrder.indexOf(uid);
+    const v = parseFloat(inputs[idx]?.value || '0');
+    return isNaN(v) ? 0 : v;
+  });
+  const sumPct = pcts.reduce((a,b)=>a+b,0);
+  if (Math.round(sumPct) !== 100) { res.error = 'Percentages must sum to 100% for selected members.'; return res; }
+  let sharesCents = pcts.map(p => Math.round(totalCents * (p/100)));
+  let delta = totalCents - sharesCents.reduce((a,b)=>a+b,0);
+  const idxs = sharesCents.map((_,i)=>i).filter(i=>pcts[i]>0);
+  let k = 0;
+  while (delta !== 0 && idxs.length > 0) {
+    const i = idxs[k % idxs.length];
+    sharesCents[i] += (delta > 0 ? 1 : -1);
+    delta += (delta > 0 ? -1 : 1);
+    k++; if (k > 10000) break;
+  }
+  res.participants = selectedIds.map((uid, i) => ({ user_id: uid, share_amount: sharesCents[i] / 100 }));
+  res.sumCents = sharesCents.reduce((a,b)=>a+b,0);
+  return res;
+}
+
+function updateExpenseBreakdown() {
+  const container = document.getElementById('expenseBreakdown');
+  if (!container) return;
+  const amount = parseFloat(document.getElementById('expenseAmount')?.value || '');
+  const selectedIds = getSelectedMemberIds();
+  const method = document.querySelector('input[name="splitMethod"]:checked')?.value || 'equitable';
+  const result = computeExpenseSplit(amount, selectedIds, method);
+  const membersById = new Map(((currentGroup && currentGroup.members) || []).map(m => [m.id, m]));
+
+  if (result.error) {
+    container.innerHTML = `<p class="has-text-danger">${result.error}</p>`;
+    return;
+  }
+  if (!result.participants.length) {
+    container.innerHTML = '<p class="has-text-grey">Select members and enter amount to see the split.</p>';
+    return;
+  }
+
+  const lines = result.participants.map(p => {
+    const name = membersById.get(p.user_id)?.name || `User ${p.user_id}`;
+    const share = Number(p.share_amount || 0);
+    const pct = amount ? (share / amount * 100) : 0;
+    return `
+      <div class="is-flex is-justify-content-space-between" style="padding:4px 0;">
+        <span>${name}</span>
+        <span><strong>$${share.toFixed(2)}</strong> <span class="has-text-grey">(${pct.toFixed(1)}%)</span></span>
+      </div>`;
+  }).join('');
+
+  const remainder = (result.totalCents - result.sumCents) / 100;
+  const foot = `
+    <hr style="margin:8px 0;">
+    <div class="is-flex is-justify-content-space-between">
+      <span>Total</span>
+      <span><strong>$${Number(amount || 0).toFixed(2)}</strong></span>
+    </div>
+    ${remainder !== 0 ? `<p class="has-text-warning" style="margin-top:4px;">Remainder adjustment: $${remainder.toFixed(2)}</p>` : ''}
+  `;
+  container.innerHTML = lines + foot;
+}
 
 // ========================================
 // MODAL MANAGEMENT
@@ -372,6 +462,15 @@ function showAddExpenseModal() {
         }
         populateMemberSelects('expenseMembers', members);
         handleSplitMethodChange();
+        // Wire live preview listeners
+        const amt = document.getElementById('expenseAmount');
+        const membersSel = document.getElementById('expenseMembers');
+        if (amt) amt.addEventListener('input', updateExpenseBreakdown);
+        if (membersSel) membersSel.addEventListener('change', updateExpenseBreakdown);
+        const radios = document.getElementsByName('splitMethod');
+        radios.forEach(r => r.addEventListener('change', updateExpenseBreakdown));
+        // Initial render
+        setTimeout(updateExpenseBreakdown, 0);
         modal.classList.add('is-active');
     }
 }
@@ -467,11 +566,9 @@ function handleSplitMethodChange() {
         percentageInputsDiv.innerHTML = '';
         members.forEach(member => {
             const inputHTML = `
-                <div class="field is-horizontal">
-                    <div class="field-label is-normal">
-                        <label class="label">${member.name}</label>
-                    </div>
-                    <div class="field-body">
+                <div class="field">
+                    <label class="label">${member.name}</label>
+                    <div class="control">
                         <div class="field has-addons">
                             <div class="control is-expanded">
                                 <input class="input" type="number" placeholder="%" min="0" max="100">
@@ -485,12 +582,16 @@ function handleSplitMethodChange() {
             `;
             percentageInputsDiv.insertAdjacentHTML('beforeend', inputHTML);
         });
+        // Recalculate when any percentage input changes
+        const inputs = percentageInputsDiv.querySelectorAll('input');
+        inputs.forEach(inp => inp.addEventListener('input', updateExpenseBreakdown));
     } else {
         percentageSection.style.display = 'none';
         percentageInputsDiv.innerHTML = '';
     }
+    // trigger redraw after switching method
+    setTimeout(updateExpenseBreakdown, 0);
 }
-
 
 /**
  * Populates a select dropdown with member options.
@@ -775,6 +876,7 @@ async function addPayment() {
     showNotification('Payment recorded successfully!', 'success');
     closeAddPaymentModal();
     await loadAndShowGroupDetails(group_id);
+    try { await loadUserGroups(); } catch (_) {}
   } catch (err) {
     showNotification(err.message, 'error');
   }
