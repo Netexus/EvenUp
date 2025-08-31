@@ -428,8 +428,6 @@ function showUpdatePrompt() {
         document.body.removeChild(updateBanner);
     });
 }
-
-// ========================================
 // PROFILE MANAGEMENT
 // ========================================
 
@@ -448,6 +446,9 @@ function loadProfileData() {
         if (document.getElementById('userEmail')) {
             document.getElementById('userEmail').textContent = user.email || 'Not set';
         }
+        if (document.getElementById('username')) {
+            document.getElementById('username').textContent = user.username || 'Not set';
+        }
         if (document.getElementById('userPhone')) {
             document.getElementById('userPhone').textContent = user.phoneNumber || 'Not set';
         }
@@ -463,7 +464,6 @@ function loadProfileData() {
 function uploadProfilePicture() {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = 'image/*';
 
     input.addEventListener('change', (e) => {
         const file = e.target.files[0];
@@ -508,7 +508,13 @@ function editBirthDate() {
 }
 
 function editUsername() {
-    showEditModal('Username', 'text', 'pegasso-admin');
+    try {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const current = user.username || '';
+        showEditModal('Username', 'text', current || 'username');
+    } catch (e) {
+        showEditModal('Username', 'text', '');
+    }
 }
 
 function showEditModal(fieldName, inputType, currentValue) {
