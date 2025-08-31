@@ -10,23 +10,38 @@ function toPgParams(sql, params = []) {
 }
 
 /**
- * PostgreSQL connection pool configuration (Render compatible)
- * Prefer DATABASE_URL. Falls back to discrete env vars.
+ * PostgreSQL connection pool configuration
+ * - Production (Render/hosted): use DATABASE_URL with SSL on
+ * - Local development: use discrete env vars, SSL off by default
  */
-const useDatabaseUrl = !!process.env.DATABASE_URL;
+const isProd = process.env.NODE_ENV === 'production' || !!process.env.RENDER;
+const useDatabaseUrl = isProd && !!process.env.DATABASE_URL;
+const defaultLocalSsl = false;
+const defaultProdSsl = { rejectUnauthorized: false };
+
 const pool = new Pool(
   useDatabaseUrl
     ? {
         connectionString: process.env.DATABASE_URL,
-        ssl: process.env.PGSSL === 'false' ? false : { rejectUnauthorized: false }
+        ssl:
+          process.env.PGSSL === 'false'
+            ? false
+            : process.env.PGSSL === 'true'
+            ? defaultProdSsl
+            : defaultProdSsl
       }
     : {
         host: process.env.DB_HOST,
         user: process.env.DB_USER,
         password: process.env.DB_PASSWORD,
         database: process.env.DB_NAME,
-        port: process.env.DB_PORT ? Number(process.env.DB_PORT) : 5432,
-        ssl: process.env.PGSSL === 'false' ? false : { rejectUnauthorized: false }
+        port: process.env.DB_PORT,
+        ssl:
+          process.env.PGSSL === 'true'
+            ? defaultProdSsl
+            : process.env.PGSSL === 'false'
+            ? false
+            : defaultLocalSsl
       }
 );
 

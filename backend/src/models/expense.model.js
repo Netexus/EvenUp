@@ -8,7 +8,6 @@ const Expense = {
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [group_id, paid_by, amount, description, category, date, expense_name]
     );
-    // PostgreSQL: result.insertId is set by wrapper
     return await Expense.getById(result.insertId);
   },
 
@@ -52,8 +51,8 @@ const Expense = {
   },
 
   async remove(expenseId) {
-    const [res] = await db.execute(`DELETE FROM expenses WHERE expense_id = ?`, [expenseId]);
-    return res.affectedRows > 0;
+    await db.execute(`DELETE FROM expenses WHERE expense_id = ?`, [expenseId]);
+    return true;
   }
 };
 

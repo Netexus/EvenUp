@@ -1,6 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const pool = require('../config/database');
+const db = require('../config/database');
 
 exports.register = async (req, res) => {
     try {
@@ -15,7 +15,7 @@ exports.register = async (req, res) => {
         }
 
         // Verificar si el usuario ya existe
-        const [existingUsers] = await pool.query(
+        const [existingUsers] = await db.query(
             'SELECT * FROM app_users WHERE email = ? OR username = ? OR phone = ?',
             [email, username, phoneNumber]
         );
@@ -32,7 +32,7 @@ exports.register = async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, salt);
 
         // Insertar usuario (incluye birthdate requerido por el esquema)
-        const [result] = await pool.query(
+        const [result] = await db.execute(
             'INSERT INTO app_users (name, username, phone, email, birthdate, password_hash) VALUES (?, ?, ?, ?, ?, ?)',
             [fullName, username, phoneNumber, email, birthDate, hashedPassword]
         );
@@ -66,7 +66,7 @@ exports.login = async (req, res) => {
         }
 
         // Find user
-        const [users] = await pool.query('SELECT * FROM app_users WHERE username = ?', [username]);
+        const [users] = await db.query('SELECT * FROM app_users WHERE username = ?', [username]);
         if (users.length === 0) {
             return res.status(401).json({ status: 'error', message: 'Invalid credentials' });
         }
