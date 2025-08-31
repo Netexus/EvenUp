@@ -84,7 +84,7 @@ const ExpensesSummaryModel = {
 };
 
 const ExpenseDetailModel = {
-  getExpenseDetail: async (expenseId) => {
+  async getExpenseDetail(expenseId) {
     const query = `
       SELECT
         e.expense_name,
@@ -93,9 +93,9 @@ const ExpenseDetailModel = {
         e.description,
         e.category,
         u.name AS paid_by_user,
-        GROUP_CONCAT(
-          CONCAT(au.name, ': ', ep.share_amount)
-          ORDER BY au.name SEPARATOR ', '
+        string_agg(
+          (au.name || ': ' || ep.share_amount::text),
+          ', ' ORDER BY au.name
         ) AS participants_and_shares
       FROM expenses AS e
       JOIN app_users AS u
@@ -114,6 +114,4 @@ const ExpenseDetailModel = {
   }
 };
 
-module.exports = ExpenseDetailModel;
-module.exports = ExpensesSummaryModel;
-module.exports = Expense;
+module.exports = { ...Expense, ...ExpensesSummaryModel, ...ExpenseDetailModel };
