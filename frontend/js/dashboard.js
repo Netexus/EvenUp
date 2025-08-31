@@ -284,6 +284,11 @@ try {
   };
   try { localStorage.setItem('active_group_id', String(group.group_id)); } catch (_) {}
   showGroupDetails(group);
+  
+  // Load member balances, debt breakdown and transaction history after showing group details
+  await loadMemberBalances(group.group_id);
+  await loadDebtBreakdown(group.group_id);
+  await loadTransactionHistory(group.group_id);
 } catch (e) {
   showNotification('Failed to load group details', 'error');
 }
@@ -303,6 +308,12 @@ async function addExpense() {
   const checkboxes = document.querySelectorAll('#expenseMembersCheckboxes input[type="checkbox"]:checked');
   const selectedIds = Array.from(checkboxes).map(cb => Number(cb.value));
   if (!selectedIds.length) return showNotification('Select at least one participant.', 'error');
+
+  // CRÍTICO: Asegurar que el pagador esté incluido en participantes
+  if (!selectedIds.includes(paid_by)) {
+    selectedIds.push(paid_by);
+    console.log(`[Frontend] Auto-added payer (${paid_by}) to participants`);
+  }
 
   const method = document.querySelector('input[name="splitMethod"]:checked')?.value || 'equitable';
 
@@ -331,11 +342,15 @@ async function addExpense() {
       showNotification('Expense created successfully!', 'success');
       closeAddExpenseModal();
       await loadAndShowGroupDetails(group_id);
+      await loadMemberBalances(group_id);
+      await loadDebtBreakdown(group_id);
+      await loadTransactionHistory(group_id);
   } catch (err) {
       showNotification(err.message, 'error');
   }
 }
 
+// ...
 
 // ========================================
 // MODAL MANAGEMENT
@@ -516,12 +531,15 @@ async function addMembersToGroup() {
             const userMatches = await apiFetch(`/users/search?query=${encodeURIComponent(name)}&limit=1`);
             const user = Array.isArray(userMatches) ? userMatches[0] : null;
 
-            // Check if the user exists and isn't already a member
+            // Check if the user exists and isn't already a member or the current user
             if (user && user.user_id && !existingMemberIds.includes(user.user_id) && user.user_id !== currentUser) {
                 usersToAdd.push(user);
                 existingMemberIds.push(user.user_id); // Prevent adding duplicates in this session
             } else if (!user) {
                 notFound.push(name);
+            } else if (user.user_id === currentUser) {
+                // Don't add to notFound, just silently skip current user
+                console.log(`Skipping current user: ${name}`);
             }
         } catch (e) {
             notFound.push(name);
@@ -729,12 +747,24 @@ function populatePaidBySelect(members) {
   const paidBySelect = document.getElementById('expensePaidBy');
   if (!paidBySelect) return;
   paidBySelect.innerHTML = '<option value="">Select who paid...</option>';
+  const currentUserId = CURRENT_USER_ID();
+  
   members.forEach(member => {
       const option = document.createElement('option');
-      option.value = member.id || member.user_id;
-      option.textContent = member.name || member.username || `User ${member.id || member.user_id}`;
+      const memberId = member.id || member.user_id;
+      option.value = memberId;
+      option.textContent = member.name || member.username || `User ${memberId}`;
+      
+      // Auto-select current user
+      if (memberId === currentUserId) {
+          option.selected = true;
+      }
+      
       paidBySelect.appendChild(option);
   });
+  
+  // Trigger change event to update participants
+  paidBySelect.dispatchEvent(new Event('change'));
 }
 
 /**
@@ -746,10 +776,19 @@ function populateMemberSelects(selectId, members) {
   const select = document.getElementById(selectId);
   if (!select) return;
   select.innerHTML = '';
+  const currentUserId = CURRENT_USER_ID();
+  
   members.forEach(member => {
       const option = document.createElement('option');
-      option.value = member.id;
-      option.textContent = member.name;
+      const memberId = member.id || member.user_id;
+      option.value = memberId;
+      option.textContent = member.name || member.username || `User ${memberId}`;
+      
+      // Auto-select current user for "from" field in payments
+      if (selectId === 'paymentFrom' && memberId === currentUserId) {
+          option.selected = true;
+      }
+      
       select.appendChild(option);
   });
 }
@@ -758,20 +797,288 @@ function populateMembersCheckboxes(members) {
   const container = document.getElementById('expenseMembersCheckboxes');
   if (!container) return;
   container.innerHTML = '';
+  const currentUserId = CURRENT_USER_ID();
+  
   members.forEach(member => {
       const memberId = member.id || member.user_id;
       const memberName = member.name || member.username || `User ${memberId}`;
       const label = document.createElement('label');
       label.className = 'checkbox';
-      label.innerHTML = `
-          <input type="checkbox" value="${memberId}">
-          <span>${memberName}</span>
-      `;
+      
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.value = memberId;
+      
+      // Auto-check current user (payer)
+      if (memberId === currentUserId) {
+          checkbox.checked = true;
+      }
+      
+      // Add event listener to update expense summary
+      checkbox.addEventListener('change', updateExpenseSummaryFromForm);
+      
+      label.appendChild(checkbox);
+      label.appendChild(document.createTextNode(' ' + memberName));
       container.appendChild(label);
   });
   
   // Reset expense summary when members are repopulated
   updateExpenseSummary(0, 0, [], 'equitable');
+}
+
+// ========================================
+// MEMBER BALANCES FUNCTIONS
+// ========================================
+
+async function loadMemberBalances(groupId) {
+  try {
+    const balances = await apiFetch(`/settlements/balances/group/${groupId}`);
+    renderMemberBalances(balances);
+  } catch (error) {
+    console.error('Error loading member balances:', error);
+    document.getElementById('memberBalancesList').innerHTML = 
+      '<div class="balance-item"><span class="has-text-danger">Error loading balances</span></div>';
+  }
+}
+
+function renderMemberBalances(balances) {
+  const container = document.getElementById('memberBalancesList');
+  
+  if (!balances || balances.length === 0) {
+    container.innerHTML = '<div class="balance-item"><span class="has-text-grey">No balances found</span></div>';
+    return;
+  }
+
+  container.innerHTML = balances.map(balance => {
+    const amount = Number(balance.net || 0);
+    const amountClass = amount > 0 ? 'positive' : amount < 0 ? 'negative' : 'zero';
+    const initials = balance.name.split(' ').map(n => n[0]).join('').toUpperCase();
+    
+    return `
+      <div class="balance-item">
+        <div class="balance-user-info">
+          <div class="balance-avatar">${initials}</div>
+          <span class="balance-name">${balance.name}</span>
+        </div>
+        <span class="balance-amount ${amountClass}">$${Math.abs(amount).toFixed(2)}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+async function loadDebtBreakdown(groupId) {
+  try {
+    const balances = await apiFetch(`/settlements/balances/group/${groupId}`);
+    renderDebtBreakdown(balances);
+  } catch (error) {
+    console.error('Error loading debt breakdown:', error);
+    document.getElementById('debtBreakdownList').innerHTML = 
+      '<div class="debt-item"><span class="has-text-danger">Error loading debt breakdown</span></div>';
+  }
+}
+
+function renderDebtBreakdown(balances) {
+  const container = document.getElementById('debtBreakdownList');
+  const currentUserId = CURRENT_USER_ID();
+  
+  if (!balances || balances.length === 0) {
+    container.innerHTML = '<div class="debt-item"><span class="has-text-grey">No debts found</span></div>';
+    return;
+  }
+
+  // Find current user's balance
+  const currentUser = balances.find(b => b.user_id === currentUserId);
+  const currentUserBalance = Number(currentUser?.net || 0);
+  
+  // Create debt relationships
+  const debts = [];
+  
+  balances.forEach(balance => {
+    const amount = Number(balance.net || 0);
+    const userId = balance.user_id;
+    
+    if (userId === currentUserId) return; // Skip self
+    
+    if (currentUserBalance < 0 && amount > 0) {
+      // Current user owes this person
+      const owedAmount = Math.min(Math.abs(currentUserBalance), amount);
+      if (owedAmount > 0.01) {
+        debts.push({
+          type: 'you-owe',
+          description: `You owe ${balance.name}`,
+          amount: owedAmount
+        });
+      }
+    } else if (currentUserBalance > 0 && amount < 0) {
+      // This person owes current user
+      const owedAmount = Math.min(currentUserBalance, Math.abs(amount));
+      if (owedAmount > 0.01) {
+        debts.push({
+          type: 'owes-you',
+          description: `${balance.name} owes you`,
+          amount: owedAmount
+        });
+      }
+    }
+  });
+
+  if (debts.length === 0) {
+    container.innerHTML = '<div class="debt-item"><span class="has-text-grey">All debts settled!</span></div>';
+    return;
+  }
+
+  container.innerHTML = debts.map(debt => `
+    <div class="debt-item ${debt.type}">
+      <div class="debt-description">
+        <span>${debt.description}</span>
+        <span class="debt-arrow">→</span>
+      </div>
+      <span class="debt-amount ${debt.type}">$${debt.amount.toFixed(2)}</span>
+    </div>
+  `).join('');
+}
+
+// ========================================
+// TRANSACTION HISTORY
+// ========================================
+
+let currentTransactionFilter = 'all';
+
+/**
+ * Loads and displays transaction history for a group
+ */
+async function loadTransactionHistory(groupId) {
+  try {
+    const [expenses, settlements] = await Promise.all([
+      apiFetch(`/expenses/group/${groupId}`).catch(() => []),
+      apiFetch(`/settlements/group/${groupId}`).catch(() => [])
+    ]);
+
+    const transactions = [];
+
+    // Add expenses
+    (expenses || []).forEach(expense => {
+      transactions.push({
+        type: 'expense',
+        id: expense.expense_id,
+        title: expense.expense_name || 'Expense',
+        description: expense.description || '',
+        amount: Number(expense.amount || 0),
+        paidBy: expense.paid_by_name || `User ${expense.paid_by}`,
+        date: new Date(expense.date || expense.created_at),
+        category: expense.category || 'General'
+      });
+    });
+
+    // Add settlements/payments
+    (settlements || []).forEach(settlement => {
+      transactions.push({
+        type: 'payment',
+        id: settlement.settlement_id,
+        title: 'Payment',
+        description: `${settlement.from_user_name || `User ${settlement.from_user}`} → ${settlement.to_user_name || `User ${settlement.to_user}`}`,
+        amount: Number(settlement.amount || 0),
+        paidBy: settlement.from_user_name || `User ${settlement.from_user}`,
+        date: new Date(settlement.created_at),
+        category: 'Payment'
+      });
+    });
+
+    // Sort by date (newest first)
+    transactions.sort((a, b) => b.date - a.date);
+
+    // Store for filtering
+    window.allTransactions = transactions;
+    
+    // Display transactions
+    renderTransactions(transactions);
+    
+  } catch (error) {
+    console.error('Error loading transaction history:', error);
+    document.getElementById('transactionList').innerHTML = `
+      <div class="transaction-item">
+        <i class="fas fa-exclamation-triangle" style="color: #ff6b6b;"></i>
+        <span>Error loading transactions</span>
+      </div>
+    `;
+  }
+}
+
+/**
+ * Renders transactions in the UI
+ */
+function renderTransactions(transactions) {
+  const container = document.getElementById('transactionList');
+  if (!container) return;
+
+  if (!transactions || transactions.length === 0) {
+    container.innerHTML = `
+      <div class="transaction-item">
+        <i class="fas fa-info-circle" style="color: var(--text-secondary);"></i>
+        <span>No transactions yet</span>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = transactions.map(transaction => {
+    const isExpense = transaction.type === 'expense';
+    const icon = isExpense ? 'fas fa-shopping-cart' : 'fas fa-exchange-alt';
+    const iconClass = isExpense ? 'expense' : 'payment';
+    
+    const dateStr = transaction.date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+    
+    const timeStr = transaction.date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+
+    return `
+      <div class="transaction-item">
+        <div class="transaction-icon ${iconClass}">
+          <i class="${icon}"></i>
+        </div>
+        <div class="transaction-details">
+          <div class="transaction-title">${transaction.title}</div>
+          <div class="transaction-meta">
+            By ${transaction.paidBy} • ${dateStr} at ${timeStr}
+            ${transaction.description ? `<br><small>${transaction.description}</small>` : ''}
+          </div>
+        </div>
+        <div class="transaction-amount">
+          $${transaction.amount.toFixed(2)}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+/**
+ * Shows transactions filtered by type
+ */
+function showTransactionTab(filter) {
+  currentTransactionFilter = filter;
+  
+  // Update tab appearance
+  document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+  document.getElementById(`tab${filter.charAt(0).toUpperCase() + filter.slice(1)}`).classList.add('active');
+  
+  // Filter and display transactions
+  const allTransactions = window.allTransactions || [];
+  let filtered = allTransactions;
+  
+  if (filter === 'expenses') {
+    filtered = allTransactions.filter(t => t.type === 'expense');
+  } else if (filter === 'payments') {
+    filtered = allTransactions.filter(t => t.type === 'payment');
+  }
+  
+  renderTransactions(filtered);
 }
 
 // ========================================
@@ -1066,12 +1373,21 @@ function handleAddMember(e) {
 * Adds a new member as a tag in the UI.
 * @param {string} name - The name of the member to add.
 */
-function addMemberToTags(name) {
-  const memberTagsContainer = document.getElementById('memberTags');
+function addMemberToTags(name, containerId = 'memberTags') {
+  const memberTagsContainer = document.getElementById(containerId);
+  const currentUsername = CURRENT_USERNAME();
+  
+  // Prevent adding current user
+  if (currentUsername && name.toLowerCase() === currentUsername.toLowerCase()) {
+    showNotification('You cannot add yourself to the group', 'error');
+    return;
+  }
+  
   // prevent duplicates
-  const existing = Array.from(document.querySelectorAll('#memberTags .tag'))
+  const existing = Array.from(document.querySelectorAll(`#${containerId} .tag`))
     .map(t => t.textContent.trim().replace(/\s*×\s*$/, ''));
   if (existing.some(t => t.toLowerCase() === String(name).toLowerCase())) return;
+  
   const newTagHTML = `
       <span class="tag is-info is-light">
           ${name}
@@ -1126,6 +1442,9 @@ try {
   showNotification('Payment recorded successfully!', 'success');
   closeAddPaymentModal();
   await loadAndShowGroupDetails(group_id);
+  await loadMemberBalances(group_id);
+  await loadDebtBreakdown(group_id);
+  await loadTransactionHistory(group_id);
 } catch (err) {
   showNotification(err.message, 'error');
 }
@@ -1270,22 +1589,18 @@ function initializeUserAvatar() {
 
 // Expose functions for inline handlers in dashboard.html
 try {
-  window.showCreateGroupModal = showCreateGroupModal;
-  window.closeCreateGroupModal = closeCreateGroupModal;
-  window.showAddPaymentModal = showAddPaymentModal;
-  window.closeAddPaymentModal = closeAddPaymentModal;
-  window.showAddExpenseModal = showAddExpenseModal;
-  window.closeAddExpenseModal = closeAddExpenseModal;
-  window.createGroup = createGroup;
-  window.addExpense = addExpense;
-  window.addPayment = addPayment;
-  window.showDashboard = showDashboard;
-  window.toggleTheme = window.toggleTheme || toggleTheme;
-  window.showAddMemberModal = showAddMemberModal;
-  window.closeAddMemberModal = closeAddMemberModal;
-  window.addMembersToGroup = addMembersToGroup;
-  window.editGroupName = editGroupName;
-  // No need to expose initializeUserAvatar, as it's called on DOMContentLoaded
+window.showCreateGroupModal = showCreateGroupModal;
+window.closeCreateGroupModal = closeCreateGroupModal;
+window.showAddPaymentModal = showAddPaymentModal;
+window.closeAddPaymentModal = closeAddPaymentModal;
+window.showAddExpenseModal = showAddExpenseModal;
+window.closeAddExpenseModal = closeAddExpenseModal;
+window.createGroup = createGroup;
+window.addExpense = addExpense;
+window.addPayment = addPayment;
+window.showDashboard = showDashboard;
+window.toggleTheme = window.toggleTheme || toggleTheme;
+window.showTransactionTab = showTransactionTab;
 } catch (_) {}
 
 // ========================================

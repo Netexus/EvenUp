@@ -47,6 +47,281 @@
     --transition-slow: 0.5s ease;
 }
 
+/* Member Balances Styles */
+.member-balances-section {
+  margin-top: 1.5rem;
+  background: var(--card-bg);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.member-balances-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+}
+
+.member-balances-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.balance-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: var(--bg-primary);
+  border-radius: 8px;
+  border-left: 4px solid var(--primary-color);
+}
+
+.balance-item.loading {
+  justify-content: center;
+  gap: 0.5rem;
+  color: var(--text-secondary);
+}
+
+.balance-user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.balance-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--primary-color);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.balance-amount {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.balance-amount.positive {
+  color: #00d1b2;
+}
+
+.balance-amount.negative {
+  color: #ff3860;
+}
+
+.balance-amount.zero {
+  color: var(--text-secondary);
+}
+
+/* Debt Breakdown Styles */
+.debt-breakdown-section {
+  margin-top: 1.5rem;
+  background: var(--card-bg);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.debt-breakdown-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+}
+
+.debt-breakdown-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.debt-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: var(--bg-primary);
+  border-radius: 8px;
+  border-left: 4px solid #ff3860;
+}
+
+.debt-item.loading {
+  justify-content: center;
+  gap: 0.5rem;
+  color: var(--text-secondary);
+  border-left-color: var(--primary-color);
+}
+
+.debt-item.you-owe {
+  border-left-color: #ff3860;
+  background: rgba(255, 56, 96, 0.05);
+}
+
+.debt-item.owes-you {
+  border-left-color: #00d1b2;
+  background: rgba(0, 209, 178, 0.05);
+}
+
+.debt-description {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.debt-arrow {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.debt-amount {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.debt-amount.you-owe {
+  color: #ff3860;
+}
+
+.debt-amount.owes-you {
+  color: #00d1b2;
+}
+
+/* Transaction History Styles */
+.transaction-history-section {
+  margin-top: 2rem;
+  background: var(--card-bg);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.transaction-history-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+}
+
+.transaction-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--bg-secondary);
+    padding-bottom: 0.5rem;
+}
+
+.tab-button {
+    background: none;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: var(--transition-fast);
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.tab-button.active {
+    background: var(--primary-color);
+    color: var(--text-dark);
+}
+
+.tab-button:hover:not(.active) {
+    background: var(--bg-secondary);
+}
+
+.transaction-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.transaction-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border-bottom: 1px solid var(--bg-secondary);
+    transition: var(--transition-fast);
+}
+
+.transaction-item:hover {
+    background: var(--bg-primary);
+}
+
+.transaction-item:last-child {
+    border-bottom: none;
+}
+
+.transaction-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    color: white;
+}
+
+.transaction-icon.expense {
+    background: #ff6b6b;
+}
+
+.transaction-icon.payment {
+    background: #51cf66;
+}
+
+.transaction-details {
+    flex: 1;
+}
+
+.transaction-title {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.transaction-meta {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.transaction-amount {
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.transaction-amount.positive {
+    color: #51cf66;
+}
+
+.transaction-amount.negative {
+    color: #ff6b6b;
+}
+
+.transaction-item.loading {
+    justify-content: center;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
 /* Dark Theme Variables */
 [data-theme="dark"] {
     --secondary-color: #f1f5f9;
