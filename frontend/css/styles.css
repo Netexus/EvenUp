@@ -706,6 +706,26 @@ body {
 }
 
 /* Auth Cards */
+
+/* Scrollbar Styling */
+.signup-card::-webkit-scrollbar {
+    width: 6px;
+}
+
+.signup-card::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.signup-card::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 3px;
+    opacity: 0.5;
+}
+
+.signup-card::-webkit-scrollbar-thumb:hover {
+    opacity: 1;
+}
+
 .login-card,
 .signup-card {
     position: relative;
@@ -1136,6 +1156,23 @@ body {
 }
 
 /* Modal Styles */
+/* Hide scrollbar for Chrome, Safari and Opera */
+.modal-card-body::-webkit-scrollbar {
+    display: none;
+}
+
+/* Hide scrollbar for Firefox */
+.modal-card-body {
+    scrollbar-width: none; /* Firefox */
+}
+
+.modal-card {
+    display: flex;
+    flex-direction: column;
+    max-height: 70vh; /* Sets a maximum height for the modal */
+    width: 90%; /* Adjusts the width for better responsiveness */
+}
+
 .modal-card-head,
 .modal-card-foot {
     background: var(--card-bg);
@@ -1151,6 +1188,11 @@ body {
     background: var(--card-bg);
     backdrop-filter: blur(20px);
     color: var(--text-secondary);
+}
+
+.modal-card-body {
+    flex-grow: 1; 
+    overflow-y: scroll; 
 }
 
 /* Form input styles for modal */
@@ -1206,6 +1248,39 @@ body {
     transform: scale(1.1);
 }
 
+/* Styling for the new group name edit button */
+.edit-group-name-btn {
+    background: none;
+    border: none;
+    color: var(--primary-color);
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    padding: 0 0.5rem;
+    vertical-align: middle;
+}
+
+.edit-group-name-btn:hover {
+    transform: scale(1.1);
+}
+
+/* Add spacing between the back button and the group info */
+.back-button-container {
+    margin-bottom: var(--spacing-xxl);
+}
+
+/* Adjust layout for the group details header to align items */
+.group-details-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.group-details-info h1 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
 /* Responsive Styles */
 
 /* Large Tablets and Small Desktops */
@@ -1239,6 +1314,16 @@ body {
         --spacing-xxl: 2rem;
     }
 
+    /* Ensure modal content is scrollable on small screens */
+    .modal-card {
+        max-height: 80vh;
+        height: 100%;
+    }
+
+    .modal-card-body {
+        overflow-y: scroll;
+    }
+    
     .navbar .container {
         padding: 0 var(--spacing-md);
     }
@@ -1393,6 +1478,14 @@ body {
         flex-direction: column;
         text-align: center;
     }
+
+    .group-actions {
+        flex-direction: column;
+    }
+
+    .group-actions .button {
+        width: 100%;
+    }
 }
 
 /* Mobile Landscape */
@@ -1415,6 +1508,15 @@ body {
         height: 45px;
         font-size: 1.2rem;
     }
+    
+    .group-actions {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .group-actions .button {
+        width: 45%;
+    }
 }
 
 /* Small Mobile Devices */
@@ -1426,6 +1528,15 @@ body {
         --spacing-lg: 0.75rem;
         --spacing-xl: 1rem;
         --spacing-xxl: 1.5rem;
+    }
+
+    /* Adjustments for horizontal mobile view */
+    .group-actions {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    .group-actions .button {
+        width: 100%;
     }
 
     html {
@@ -1807,4 +1918,3 @@ body {
         border: 1px solid #ccc !important;
     }
 }
-
