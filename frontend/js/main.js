@@ -6,10 +6,11 @@
 // ========================================
 // AUTHENTICATION MANAGEMENT
 // ========================================
+const API_BASE = (typeof window !== 'undefined' && window.API_BASE) ? window.API_BASE : '/api';
 const Auth = {
     async login(username, password) {
         try {
-            const response = await fetch('/api/auth/login', {
+            const response = await fetch(`${API_BASE}/auth/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -44,7 +45,7 @@ const Auth = {
 
     async register(formData) {
         try {
-            const response = await fetch('/api/auth/register', {
+            const response = await fetch(`${API_BASE}/auth/register`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

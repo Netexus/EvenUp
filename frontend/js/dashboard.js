@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
 /**
  * Helper and context 
  */
-const API_BASE = '/api';
+const API_BASE_DASH = (typeof window !== 'undefined' && window.API_BASE) ? window.API_BASE : '/api';
 // Prefer AuthHelper token, fallback to legacy key 'token'
 const authToken = () => (window.AuthHelper && AuthHelper.getToken && AuthHelper.getToken()) || localStorage.getItem('token') || '';
 // Prefer persisted 'user' from login flow
@@ -44,7 +44,7 @@ const CURRENT_USER_ID = () => (currentUser()?.id || currentUser()?.user_id || 0)
 const CURRENT_USERNAME = () => (currentUser()?.username || '');
 
 async function apiFetch(path, { method = 'GET', body } = {}) {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(`${API_BASE_DASH}${path}`, {
     method,
     headers: {
       'Content-Type': 'application/json',
@@ -918,6 +918,21 @@ function toggleTheme() {
         metaThemeColor.setAttribute('content', newTheme === 'dark' ? '#0f172a' : '#4DF7EC');
     }
 }
+
+// Expose functions for inline handlers in dashboard.html
+try {
+  window.showCreateGroupModal = showCreateGroupModal;
+  window.closeCreateGroupModal = closeCreateGroupModal;
+  window.showAddPaymentModal = showAddPaymentModal;
+  window.closeAddPaymentModal = closeAddPaymentModal;
+  window.showAddExpenseModal = showAddExpenseModal;
+  window.closeAddExpenseModal = closeAddExpenseModal;
+  window.createGroup = createGroup;
+  window.addExpense = addExpense;
+  window.addPayment = addPayment;
+  window.showDashboard = showDashboard;
+  window.toggleTheme = window.toggleTheme || toggleTheme;
+} catch (_) {}
 
 // ========================================
 // GROUP MEMBERS FETCHING & USAGE

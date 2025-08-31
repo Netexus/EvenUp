@@ -1,5 +1,7 @@
 // API Configuration
-const API_URL = 'http://localhost:3000/api';
+// Prefer a globally provided base (e.g., set window.API_BASE in HTML) and
+// fallback to same-origin relative path which works on Render and local dev
+const API_URL = (typeof window !== 'undefined' && window.API_BASE) ? window.API_BASE : '/api';
 
 // Utility functions
 const handleResponse = async (response) => {
