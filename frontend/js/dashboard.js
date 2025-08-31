@@ -161,8 +161,22 @@ function renderGroupsGrid(groups) {
         <div class="group-avatar">${String(name).substring(0,2).toUpperCase()}</div>
         <div class="group-info">
           <h3>${name}</h3>
-          <p></p>
+          <p>${(g.members||[]).length} members</p>
         </div>
+      </div>
+      <div class="group-stats">
+          <div class="stat-item">
+              <span class="stat-value">$${Number(g.totalExpenses || 0).toFixed(2)}</span>
+              <span class="stat-label">Total Expenses</span>
+          </div>
+          <div class="stat-item">
+              <span class="stat-value">$${Number(g.youOwe || 0).toFixed(2)}</span>
+              <span class="stat-label">You Owe</span>
+          </div>
+          <div class="stat-item">
+              <span class="stat-value">$${Number(g.youAreOwed || 0).toFixed(2)}</span>
+              <span class="stat-label">You're Owed</span>
+          </div>
       </div>
     `;
     card.onclick = () => loadAndShowGroupDetails(g.group_id || g.id);
@@ -182,7 +196,7 @@ async function loadAndShowGroupDetails(groupId) {
       id: r.user_id,
       name: r.user_name || r.username || `User ${r.user_id}`
     }));
-
+    
     // 3) Totals and balance
     let totalExpenses = 0;
     try {
@@ -325,7 +339,12 @@ function resetCreateGroupForm() {
 
   // Clear member tags and input
   const memberTags = document.getElementById('memberTags');
-  if (memberTags) memberTags.innerHTML = '';
+  if (memberTags) memberTags.innerHTML = `
+      <span class="tag is-primary">
+          You
+          <button class="delete is-small"></button>
+      </span>
+  `;
   const addMemberInput = document.getElementById('addMemberInput');
   if (addMemberInput) addMemberInput.value = '';
   clearMemberSuggestions();
@@ -387,9 +406,86 @@ function closeAddExpenseModal() {
     document.getElementById('addExpenseForm').reset();
 }
 
-// ========================================
-// DYNAMIC FORM MANAGEMENT
-// ========================================
+/**
+ * Shows the add members modal and populates it with current members.
+ */
+function showAddMemberModal() {
+    const modal = document.getElementById('addMemberModal');
+    if (modal) {
+        // Clear previous tags and populate with existing members
+        const memberTagsContainer = document.getElementById('modalMemberTags');
+        memberTagsContainer.innerHTML = '';
+
+        currentGroup.members.forEach(member => {
+            addMemberToTags(member.name, 'modalMemberTags');
+        });
+        
+        // Add event listener for the modal's input
+        const addMemberInput = document.getElementById('addModalMemberInput');
+        if (addMemberInput) {
+            // Remove previous event listener to prevent duplicates
+            const oldHandler = addMemberInput.onkeydown;
+            if (oldHandler) addMemberInput.removeEventListener('keydown', oldHandler);
+            
+            addMemberInput.addEventListener('keydown', (e) => handleAddMember(e, 'modalMemberTags'));
+        }
+
+        modal.classList.add('is-active');
+    }
+}
+
+/**
+ * Closes the add member modal.
+ */
+function closeAddMemberModal() {
+    const modal = document.getElementById('addMemberModal');
+    if (modal) {
+        modal.classList.remove('is-active');
+    }
+}
+
+/**
+ * Handles adding new members to the group after the modal is closed.
+ */
+async function addMembersToGroup() {
+    const newMembers = getMembers('modalMemberTags');
+    const existingMemberNames = currentGroup.members.map(m => m.name);
+    
+    // Add only new members to the group
+    for (const memberName of newMembers) {
+      if (!existingMemberNames.includes(memberName)) {
+        try {
+          const userMatches = await apiFetch(`/users/search?query=${encodeURIComponent(memberName)}`);
+          const user = Array.isArray(userMatches) ? userMatches[0] : null;
+          if (user) {
+            await apiFetch('/memberships', { method: 'POST', body: { group_id: currentGroup.id, user_id: user.user_id } });
+            currentGroup.members.push({ id: user.user_id, name: user.username });
+          }
+        } catch (e) {
+          showNotification(`Failed to add member ${memberName}: ${e.message}`, 'error');
+        }
+      }
+    }
+    
+    // Update the member count on the details page
+    document.getElementById('groupMembers').textContent = `${currentGroup.members.length} members`;
+    showNotification('Members added successfully!', 'success');
+    closeAddMemberModal();
+}
+
+/**
+ * Handles editing the group name.
+ * Prompts the user for a new name and updates the UI.
+ */
+function editGroupName() {
+    const newName = prompt("Enter a new name for the group:", currentGroup.name);
+    if (newName && newName.trim() !== "") {
+        currentGroup.name = newName.trim();
+        document.getElementById('groupNameTitle').textContent = currentGroup.name;
+        document.getElementById('groupDetailsAvatar').textContent = currentGroup.name.substring(0, 2).toUpperCase();
+        showNotification(`Group name changed to "${currentGroup.name}"`, 'success');
+    }
+}
 
 /**
  * Handles the change event of the group category select dropdown.
@@ -724,30 +820,6 @@ function getMembers() {
 
 /**
  * Handles the submission of the add payment form.
- */
-function addPaymentLegacy() {
-    const from = document.getElementById('paymentFrom').value;
-    const to = document.getElementById('paymentTo').value;
-    const amount = document.getElementById('paymentAmount').value;
-
-    if (!from || !to || !amount) {
-        showNotification('Please fill in all fields.', 'error');
-        return;
-    }
-
-    if (from === to) {
-        showNotification('Cannot make a payment to yourself.', 'error');
-        return;
-    }
-
-    // Simulate payment logic
-    console.log(`Adding payment: ${from} paid $${amount} to ${to}`);
-    showNotification('Payment added successfully!', 'success');
-    closeAddPaymentModal();
-}
-
-/**
- * Handles the submission of the add expense form.
  */
 async function addPayment() {
   const from = Number(document.getElementById('paymentFrom').value);
