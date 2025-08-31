@@ -3,7 +3,8 @@
  * Handles caching, offline functionality, and background sync
  */
 
-const CACHE_NAME = 'evenup-v1.0.1';
+const CACHE_NAME = 'evenup-v1.0.2';
+
 const urlsToCache = [
     '/',
     '/index.html',
@@ -72,33 +73,73 @@ self.addEventListener('activate', event => {
 // ========================================
 
 self.addEventListener('fetch', event => {
+    const req = event.request;
+
+    // Only handle GET requests via SW cache
+    if (req.method !== 'GET') {
+        return; // default network
+    }
+
+    const url = new URL(req.url);
+    const isSameOrigin = url.origin === self.location.origin;
+    const isApi = isSameOrigin && url.pathname.startsWith('/api');
+
+    // Always bypass cache for API calls
+    if (isApi) {
+        return; // let it go to network
+    }
+
+    // Network-first for navigations/HTML to avoid stale pages
+    const acceptsHtml = req.headers.get('accept')?.includes('text/html');
+    if (req.mode === 'navigate' || acceptsHtml) {
+        event.respondWith(
+            fetch(req)
+                .then(res => {
+                    const resClone = res.clone();
+                    caches.open(CACHE_NAME).then(cache => cache.put(req, resClone)).catch(()=>{});
+                    return res;
+                })
+                .catch(async () => {
+                    const cached = await caches.match(req);
+                    return cached || caches.match('/index.html');
+                })
+        );
+        return;
+    }
+
+    // Network-first for JS and CSS in development to reflect changes immediately
+    if (req.destination === 'script' || req.destination === 'style') {
+        event.respondWith(
+            fetch(req)
+                .then(res => {
+                    const resClone = res.clone();
+                    caches.open(CACHE_NAME).then(cache => cache.put(req, resClone)).catch(()=>{});
+                    return res;
+                })
+                .catch(async () => {
+                    const cached = await caches.match(req);
+                    return cached;
+                })
+        );
+        return;
+    }
+
+    // For images/fonts/etc: stale-while-revalidate
     event.respondWith(
-        caches.match(event.request)
-            .then(response => {
-                if (response) {
-                    return response;
-                }
-
-                return fetch(event.request).then(fetchResponse => {
-                    if (!fetchResponse || fetchResponse.status !== 200 || fetchResponse.type !== 'basic') {
-                        return fetchResponse;
+        caches.match(req).then(cached => {
+            const fetchPromise = fetch(req)
+                .then(res => {
+                    // Only cache valid basic responses
+                    if (res && res.status === 200 && (res.type === 'basic' || res.type === 'opaque')) {
+                        const resClone = res.clone();
+                        caches.open(CACHE_NAME).then(cache => cache.put(req, resClone)).catch(()=>{});
                     }
+                    return res;
+                })
+                .catch(() => cached); // fall back to cache if offline
 
-                    const responseToCache = fetchResponse.clone();
-
-                    caches.open(CACHE_NAME)
-                        .then(cache => {
-                            cache.put(event.request, responseToCache);
-                        });
-
-                    return fetchResponse;
-                });
-            })
-            .catch(() => {
-                if (event.request.destination === 'document') {
-                    return caches.match('/index.html');
-                }
-            })
+            return cached || fetchPromise;
+        })
     );
 });
 
