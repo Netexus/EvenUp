@@ -1,50 +1,71 @@
 const db = require('../config/database.js');
 
-module.exports = {
+const Users = {
+  async create(userData) {
+    const { name, username, phone, email, birthdate } = userData;
+    // Controller stores hashed password in userData.password
+    const password_hash = userData.password || userData.password_hash;
+    const [res] = await db.query(
+      'INSERT INTO app_users (name, username, phone, email, birthdate, password_hash) VALUES (?, ?, ?, ?, ?, ?)',
+      [name, username, phone, email, birthdate, password_hash]
+    );
+    const [rows] = await db.query('SELECT user_id, name, username, phone, email, birthdate, created_at FROM app_users WHERE user_id = ?', [res.insertId]);
+    return rows[0];
+  },
 
-    create: (userData, callback) => {
-        const sql = 'INSERT INTO app_users SET ?';
-        db.query(sql, userData, callback);
-    },
+  async getAll() {
+    const [rows] = await db.query('SELECT user_id, name, username, phone, email, birthdate, created_at FROM app_users');
+    return rows;
+  },
 
-    getAll: (callback) => {
-        const sql = 'SELECT user_id, name, username, phone, email, birthdate, created_at FROM app_users';
-        db.query(sql, callback);
-    },
+  async getProfile(id) {
+    const [rows] = await db.query('SELECT name, username, phone, email, password_hash, birthdate FROM app_users WHERE user_id = ?', [id]);
+    return rows[0];
+  },
 
-    getProfile: (id, callback) => {
-        const sql = 'SELECT name, username, phone, email, password_hash, birthdate FROM app_users WHERE user_id = ?';
-        db.query(sql, id, callback);
-    },
+  async getById(id) {
+    const [rows] = await db.query('SELECT user_id, name, username, phone, email, birthdate, created_at FROM app_users WHERE user_id = ?', [id]);
+    return rows[0];
+  },
 
-    getById: (id, callback) => {
-        const sql = 'SELECT user_id, name, username, phone, email, birthdate, created_at FROM app_users WHERE user_id = ?';
-        db.query(sql, id, callback);
-    },
+  async getByUsername(username) {
+    const [rows] = await db.query('SELECT * FROM app_users WHERE username = ?', [username]);
+    return rows[0];
+  },
 
-    getByUsername: (username, callback) => {
-        const sql = 'SELECT * FROM app_users WHERE username = ?';
-        db.query(sql, username, callback);
-    },
+  async getByEmail(email) {
+    const [rows] = await db.query('SELECT * FROM app_users WHERE email = ?', [email]);
+    return rows[0];
+  },
 
-    getByEmail: (email, callback) => {
-        const sql = 'SELECT * FROM app_users WHERE email = ?';
-        db.query(sql, email, callback);
-    },
+  async search(query, limit = 10) {
+    const like = `%${query}%`;
+    return db.query(
+      'SELECT user_id, username, email, name FROM app_users WHERE username LIKE ? OR email LIKE ? ORDER BY created_at DESC LIMIT ?',
+      [like, like, Number(limit) || 10]
+    );
+  },
 
-    search: (query, limit = 10) => {
-        const like = `%${query}%`;
-        const sql = 'SELECT user_id, username, email, name FROM app_users WHERE username LIKE ? OR email LIKE ? ORDER BY created_at DESC LIMIT ?';
-        return db.query(sql, [like, like, Number(limit) || 10]);
-    },
-
-    update: (id, userData, callback) => {
-        const sql = 'UPDATE app_users SET ? WHERE user_id = ?';
-        db.query(sql, [userData, id], callback);
-    },
-
-    remove: (id, callback) => {
-        const sql = 'DELETE FROM app_users WHERE user_id = ?';
-        db.query(sql, id, callback);
+  async update(id, userData) {
+    const fields = [];
+    const values = [];
+    const allowed = ['name', 'username', 'phone', 'email', 'birthdate', 'password_hash'];
+    for (const k of allowed) {
+      if (Object.prototype.hasOwnProperty.call(userData, k)) {
+        fields.push(`${k} = ?`);
+        values.push(userData[k]);
+      }
     }
+    if (fields.length === 0) return this.getById(id);
+    values.push(id);
+    await db.query(`UPDATE app_users SET ${fields.join(', ')} WHERE user_id = ?`, values);
+    return this.getById(id);
+  },
+
+  async remove(id) {
+    const [res] = await db.query('DELETE FROM app_users WHERE user_id = ?', [id]);
+    return (res.affectedRows || 0) > 0;
+  }
 };
+
+module.exports = Users;

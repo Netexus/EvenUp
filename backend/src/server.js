@@ -21,6 +21,13 @@ app.use(express.json());
 // Serve static files from the frontend directory (absolute path)
 const frontendDir = path.join(__dirname, '../../frontend');
 app.use(express.static(frontendDir));
+// PWA assets served from root
+app.get('/manifest.json', (req, res) => {
+  res.sendFile(path.join(__dirname, '../../manifest.json'));
+});
+app.get('/sw.js', (req, res) => {
+  res.sendFile(path.join(__dirname, '../../sw.js'));
+});
 // Serve index.html for any unmatched frontend routes
 app.get(['/', '/index.html', '/dashboard.html', '/groups.html', '/expenses.html', '/settlements.html', '/profile.html', '/login.html', '/signup.html'], (req, res) => {
     const fileToSend = req.path === '/' ? 'index.html' : req.path.replace(/^\//, '');
@@ -36,7 +43,7 @@ app.use('/api/expenses', expenseRoutes);
 app.use('/api/memberships', groupMembershipsRoutes);
 
 // Health check endpoint
-app.get('/', (req, res) => {
+app.get('/health', (req, res) => {
   res.json({ 
     status: 'active',
     message: 'EvenUp Payments API',

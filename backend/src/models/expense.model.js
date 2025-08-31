@@ -1,18 +1,18 @@
-const pool = require('../config/database');
+const db = require('../config/database');
 
 const Expense = {
   async create(expenseData) {
     const { group_id, paid_by, amount, description = null, category = null, date, expense_name } = expenseData;
-    const [result] = await pool.execute(
+    const [result] = await db.execute(
       `INSERT INTO expenses (group_id, paid_by, amount, description, category, date, expense_name)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [group_id, paid_by, amount, description, category, date, expense_name]
     );
-    return this.getById(result.insertId);
+    return await Expense.getById(result.insertId);
   },
 
   async getById(expenseId) {
-    const [rows] = await pool.execute(
+    const [rows] = await db.query(
       `SELECT e.*, u.name AS paid_by_name
        FROM expenses e
        JOIN app_users u ON e.paid_by = u.user_id
@@ -23,7 +23,7 @@ const Expense = {
   },
 
   async getByGroup(groupId) {
-    const [rows] = await pool.execute(
+    const [rows] = await db.query(
       `SELECT e.*, u.name AS paid_by_name
        FROM expenses e
        JOIN app_users u ON e.paid_by = u.user_id
@@ -44,20 +44,20 @@ const Expense = {
         values.push(data[k]);
       }
     }
-    if (fields.length === 0) return this.getById(expenseId);
+    if (fields.length === 0) return await Expense.getById(expenseId);
     values.push(expenseId);
-    await pool.execute(`UPDATE expenses SET ${fields.join(', ')} WHERE expense_id = ?`, values);
-    return this.getById(expenseId);
+    await db.execute(`UPDATE expenses SET ${fields.join(', ')} WHERE expense_id = ?`, values);
+    return await Expense.getById(expenseId);
   },
 
   async remove(expenseId) {
-    const [res] = await pool.execute(`DELETE FROM expenses WHERE expense_id = ?`, [expenseId]);
-    return res.affectedRows > 0;
+    await db.execute(`DELETE FROM expenses WHERE expense_id = ?`, [expenseId]);
+    return true;
   }
 };
 
 const ExpensesSummaryModel = {
-  getExpensesByGroupForUser: async (groupId, userId) => {
+  async getExpensesByGroupForUser(groupId, userId) {
     const query = `
       SELECT
         e.expense_name,
@@ -77,14 +77,13 @@ const ExpensesSummaryModel = {
       WHERE e.group_id = ?
       ORDER BY e.date DESC;
     `;
-
-    const [rows] = await pool.query(query, [userId, userId, groupId]);
+    const [rows] = await db.query(query, [userId, userId, groupId]);
     return rows;
   }
 };
 
 const ExpenseDetailModel = {
-  getExpenseDetail: async (expenseId) => {
+  async getExpenseDetail(expenseId) {
     const query = `
       SELECT
         e.expense_name,
@@ -93,9 +92,9 @@ const ExpenseDetailModel = {
         e.description,
         e.category,
         u.name AS paid_by_user,
-        GROUP_CONCAT(
-          CONCAT(au.name, ': ', ep.share_amount)
-          ORDER BY au.name SEPARATOR ', '
+        STRING_AGG(
+          au.name || ': ' || ep.share_amount,
+          ', ' ORDER BY au.name
         ) AS participants_and_shares
       FROM expenses AS e
       JOIN app_users AS u
@@ -108,12 +107,27 @@ const ExpenseDetailModel = {
       GROUP BY
         e.expense_id, e.expense_name, e.amount, e.date, e.description, e.category, u.name;
     `;
-
-    const [rows] = await pool.query(query, [expenseId]);
+    const [rows] = await db.query(query, [expenseId]);
     return rows[0];
   }
 };
 
-module.exports = ExpenseDetailModel;
-module.exports = ExpensesSummaryModel;
-module.exports = Expense;
+const GroupMembersModel = {
+  async getGroupMembers(groupId) {
+    const [rows] = await db.query(
+      `SELECT u.user_id AS id, u.name, u.username, u.email
+       FROM app_users u
+       JOIN group_memberships gm ON u.user_id = gm.user_id
+       WHERE gm.group_id = ?`,
+      [groupId]
+    );
+    return rows;
+  }
+};
+
+module.exports = {
+  Expense,
+  ExpensesSummaryModel,
+  ExpenseDetailModel,
+  GroupMembersModel
+};
