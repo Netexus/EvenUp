@@ -30,4 +30,10 @@ router.get('/balance/group/:groupId/user/:userId',
   settlementController.getUserBalance
 );
 
+// Get all balances for a group
+router.get('/balances/group/:groupId', 
+  getSettlementsByGroupValidator, 
+  settlementController.getGroupBalances
+);
+
 module.exports = router;

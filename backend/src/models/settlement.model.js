@@ -42,6 +42,25 @@ const Settlement = {
     return rows;
   },
 
+  // Get all balances for a group
+  async getGroupBalances(groupId) {
+    console.log(`[Balance] Fetching all balances for group ${groupId}`);
+    
+    const [rows] = await pool.execute(
+      `SELECT u.user_id, u.name, u.username, COALESCE(ub.net, 0) as balance,
+              ub.last_updated
+       FROM app_users u
+       LEFT JOIN user_balances ub ON u.user_id = ub.user_id AND ub.group_id = ?
+       JOIN group_memberships gm ON u.user_id = gm.user_id
+       WHERE gm.group_id = ?
+       ORDER BY u.name`,
+      [groupId, groupId]
+    );
+    
+    console.log(`[Balance] Group ${groupId} balances:`, rows.map(r => `${r.name}: $${r.balance}`).join(', '));
+    return rows.map(row => ({ ...row, net: Number(row.balance || 0) }));
+  },
+
   // Update a payment
   async update(settlementId, updateData) {
     const { amount } = updateData;
@@ -63,14 +82,25 @@ const Settlement = {
 
   // Get user balance in a group
   async getUserBalance(groupId, userId) {
+    console.log(`[Balance] Fetching balance for user ${userId} in group ${groupId}`);
+    
     const [rows] = await pool.execute(
-      `SELECT u.user_id, u.name, u.username, COALESCE(ub.net, 0) as balance
+      `SELECT u.user_id, u.name, u.username, COALESCE(ub.net, 0) as balance,
+              ub.last_updated
        FROM app_users u
        LEFT JOIN user_balances ub ON u.user_id = ub.user_id AND ub.group_id = ?
        WHERE u.user_id = ?`,
       [groupId, userId]
     );
-    return rows[0];
+    
+    const result = rows[0];
+    if (result) {
+      console.log(`[Balance] Found balance: ${result.balance} (last_updated: ${result.last_updated})`);
+      return { ...result, net: Number(result.balance || 0) };
+    }
+    
+    console.log(`[Balance] No balance record found for user ${userId} in group ${groupId}`);
+    return null;
   }
 };
 

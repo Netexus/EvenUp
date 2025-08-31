@@ -16,15 +16,19 @@ const createExpense = async (req, res) => {
 
     // Insert expense (expense_name is required by schema)
     const { group_id, paid_by, amount, description, category, date, expense_name } = req.body;
+    console.log(`[Expense] Creating expense: group=${group_id}, paid_by=${paid_by}, amount=${amount}`);
+    
     const [result] = await conn.execute(
       `INSERT INTO expenses (group_id, paid_by, amount, description, category, date, expense_name)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [group_id, paid_by, amount, description ?? null, category ?? null, date, expense_name]
     );
     const expenseId = result.insertId;
+    console.log(`[Expense] Created expense ID: ${expenseId}`);
 
     // Insert participants if provided
     if (participants.length) {
+      console.log(`[Expense] Adding ${participants.length} participants:`, participants);
       const values = [];
       const placeholders = participants.map(p => {
         values.push(expenseId, p.user_id, p.share_amount);
@@ -35,9 +39,15 @@ const createExpense = async (req, res) => {
          VALUES ${placeholders}`,
         values
       );
+      console.log(`[Expense] Participants added successfully`);
     }
 
     await conn.commit();
+
+    // Log all group balances after expense creation
+    const Settlement = require('../models/settlement.model');
+    const groupBalances = await Settlement.getGroupBalances(group_id);
+    console.log(`[Expense] After expense creation - Group ${group_id} balances updated`);
 
     // Return expense with participants
     const expense = await Expense.getById(expenseId);
