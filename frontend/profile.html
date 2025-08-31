@@ -97,7 +97,7 @@
                             </div>
                             <div class="item-info">
                                 <div class="item-label">Full Name</div>
-                                <div class="item-value">John Doe</div>
+                                <div class="item-value" id="userFullName">Loading...</div>
                             </div>
                         </div>
                     </div>
@@ -109,7 +109,7 @@
                             </div>
                             <div class="item-info">
                                 <div class="item-label">Username</div>
-                                <div class="item-value">pegasso-admin</div>
+                                <div class="item-value" id="username">Loading...</div>
                             </div>
                         </div>
                         <button class="edit-button" onclick="editUsername()">Edit</button>
@@ -122,7 +122,7 @@
                             </div>
                             <div class="item-info">
                                 <div class="item-label">Email</div>
-                                <div class="item-value">user@example.com</div>
+                                <div class="item-value" id="userEmail">Loading...</div>
                             </div>
                         </div>
                         <button class="edit-button" onclick="editEmail()">Edit</button>
@@ -135,7 +135,7 @@
                             </div>
                             <div class="item-info">
                                 <div class="item-label">Password</div>
-                                <div class="item-value">Enter your secure password</div>
+                                <div class="item-value">*******</div>
                             </div>
                         </div>
                         <button class="edit-button" onclick="editPassword()">Edit</button>
@@ -148,7 +148,7 @@
                             </div>
                             <div class="item-info">
                                 <div class="item-label">Phone Number</div>
-                                <div class="item-value">+57 123 456 7890</div>
+                                <div class="item-value" id="userPhone">Loading...</div>
                             </div>
                         </div>
                         <button class="edit-button" onclick="editPhoneNumber()">Edit</button>
@@ -161,7 +161,7 @@
                             </div>
                             <div class="item-info">
                                 <div class="item-label">Birth Date</div>
-                                <div class="item-value">November 9, 2001</div>
+                                <div class="item-value" id="userBirthDate">Loading...</div>
                             </div>
                         </div>
                     </div>
@@ -171,10 +171,7 @@
     </section>
 
     <!-- Scripts -->
-    <script>
-      // Point frontend to backend on Render when hosted separately
-      window.API_BASE = 'https://evenup-tayr.onrender.com/api';
-    </script>
+    <script src="./js/config.js"></script>
     <script src="./js/pwa.js"></script>
     <script src="./js/auth.js"></script>
     <script src="./js/main.js"></script>

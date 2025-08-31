@@ -91,9 +91,11 @@ exports.login = async (req, res) => {
             token,
             user: {
                 id: user.user_id,
+                fullName: user.name,
                 username: user.username,
                 email: user.email,
-                fullName: user.name
+                phoneNumber: user.phone,
+                birthDate: user.birthdate
             }
         });
     } catch (error) {
