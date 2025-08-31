@@ -23,10 +23,37 @@ document.addEventListener('DOMContentLoaded', () => {
   // Load user's groups on startup
   try { loadUserGroups(); } catch (_) {}
 
-
   // Add event listeners for expense summary updates
   setupExpenseSummaryListeners();
+  
+  // Initialize user avatar before setting up listeners
+  initializeUserAvatar();
+  
+  // Add event listeners for the avatar and its dropdown
+  setupAvatarDropdownListeners();
 });
+
+/**
+ * Sets up event listeners for the user avatar dropdown menu.
+ */
+function setupAvatarDropdownListeners() {
+    const avatarElement = document.getElementById('userAvatar');
+    const dropdown = document.getElementById('avatarDropdown');
+    
+    if (avatarElement && dropdown) {
+        avatarElement.addEventListener('click', (event) => {
+            event.stopPropagation(); // Prevent event from propagating to document
+            dropdown.classList.toggle('active'); // Changed from 'is-active' to 'active'
+        });
+
+        // Close menu when clicking anywhere else
+        document.addEventListener('click', (event) => {
+            if (!avatarElement.contains(event.target) && !dropdown.contains(event.target)) {
+                dropdown.classList.remove('active'); // Changed from 'is-active' to 'active'
+            }
+        });
+    }
+}
 
 /**
  * Sets up event listeners for dynamic expense summary updates
@@ -1222,19 +1249,43 @@ function toggleTheme() {
   }
 }
 
+/**
+ * Initializes the user avatar. It now uses the user's initials instead of fetching a random image.
+ */
+function initializeUserAvatar() {
+    const avatarElement = document.getElementById('userAvatar');
+    if (!avatarElement) return;
+
+    try {
+      const user = JSON.parse(localStorage.getItem('user'));
+      const username = user ? user.username : 'U';
+      if (username && username.length > 0) {
+          avatarElement.textContent = username.charAt(0).toUpperCase();
+      }
+    } catch (e) {
+      avatarElement.textContent = 'U'; // Fallback en caso de error
+    }
+}
+
+
 // Expose functions for inline handlers in dashboard.html
 try {
-window.showCreateGroupModal = showCreateGroupModal;
-window.closeCreateGroupModal = closeCreateGroupModal;
-window.showAddPaymentModal = showAddPaymentModal;
-window.closeAddPaymentModal = closeAddPaymentModal;
-window.showAddExpenseModal = showAddExpenseModal;
-window.closeAddExpenseModal = closeAddExpenseModal;
-window.createGroup = createGroup;
-window.addExpense = addExpense;
-window.addPayment = addPayment;
-window.showDashboard = showDashboard;
-window.toggleTheme = window.toggleTheme || toggleTheme;
+  window.showCreateGroupModal = showCreateGroupModal;
+  window.closeCreateGroupModal = closeCreateGroupModal;
+  window.showAddPaymentModal = showAddPaymentModal;
+  window.closeAddPaymentModal = closeAddPaymentModal;
+  window.showAddExpenseModal = showAddExpenseModal;
+  window.closeAddExpenseModal = closeAddExpenseModal;
+  window.createGroup = createGroup;
+  window.addExpense = addExpense;
+  window.addPayment = addPayment;
+  window.showDashboard = showDashboard;
+  window.toggleTheme = window.toggleTheme || toggleTheme;
+  window.showAddMemberModal = showAddMemberModal;
+  window.closeAddMemberModal = closeAddMemberModal;
+  window.addMembersToGroup = addMembersToGroup;
+  window.editGroupName = editGroupName;
+  // No need to expose initializeUserAvatar, as it's called on DOMContentLoaded
 } catch (_) {}
 
 // ========================================

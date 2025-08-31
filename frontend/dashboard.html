@@ -39,12 +39,9 @@
             <div class="nav-actions">
                 <a href="#" id="logoutBtn" class="back-button" title="Log Out">
                     <i class="fas fa-arrow-right-from-bracket"></i>
-                <a href="./dashboard.html" class="back-button">
-                    <i class="fas fa-arrow-left"></i>
-                    <span>Log Out</span>
                 </a>
-                <div class="user-avatar" onclick="toggleAvatarDropdown()" title="User Profile">
-                    U
+                <div class="user-avatar-container">
+                    <div class="user-avatar" id="userAvatar" title="User Profile"></div>
                     <div class="avatar-dropdown" id="avatarDropdown">
                         <a href="./profile.html" class="dropdown-item">
                             <i class="fas fa-edit"></i>
@@ -273,7 +270,6 @@
                         <div class="control">
                             <div class="select is-fullwidth">
                                 <select id="expensePaidBy" required>
-                                    <!-- Integrantes del grupo se agregan dinámicamente -->
                                 </select>
                             </div>
                         </div>
@@ -282,7 +278,6 @@
                         <label class="label">Members Involved</label>
                         <div class="control">
                             <div id="expenseMembersCheckboxes" class="checkbox-list-horizontal">
-                                <!-- Los checkboxes se agregan dinámicamente -->
                             </div>
                         </div>
                     </div>
@@ -306,7 +301,8 @@
                     </div>
                     <div class="field">
                         <label class="label">Breakdown Preview</label>
-                        <div id="expenseBreakdown" class="content" style="max-height: 180px; overflow:auto; border:1px solid #e5e7eb; border-radius:8px; padding:10px;">
+                        <div id="expenseBreakdown" class="content"
+                            style="max-height: 180px; overflow:auto; border:1px solid #e5e7eb; border-radius:8px; padding:10px;">
                             <p class="has-text-grey">Select members and enter amount to see the split.</p>
                         </div>
                     </div>

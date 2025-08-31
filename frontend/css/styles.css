@@ -232,6 +232,7 @@ body {
 }
 
 .avatar-dropdown.active {
+    display: block; 
     opacity: 1;
     visibility: visible;
     transform: translateY(0);
