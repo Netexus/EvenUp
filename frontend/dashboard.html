@@ -2,7 +2,6 @@
 <html lang="en">
 
 <head>
-    <!-- PWA Meta Tags -->
     <link rel="manifest" href="/manifest.json">
     <meta name="apple-mobile-web-app-title" content="EvenUp">
     <meta name="application-name" content="EvenUp">
@@ -11,28 +10,23 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
-    <!-- Basic Meta -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EvenUp - Dashboard</title>
 
-    <!-- External Stylesheets -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.9.4/css/bulma.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap"
         rel="stylesheet">
 
-    <!-- Custom Styles -->
     <link rel="stylesheet" href="./css/styles.css">
     <link rel="shortcut icon" href="./media/evenup.png" type="image/x-icon">
 </head>
 
 <body>
-    <!-- Navigation -->
     <nav class="navbar" role="navigation" aria-label="main navigation">
         <div class="container">
             <div class="navbar-brand">
@@ -45,6 +39,8 @@
             <div class="nav-actions">
                 <a href="#" id="logoutBtn" class="back-button" title="Log Out">
                     <i class="fas fa-arrow-right-from-bracket"></i>
+                <a href="./dashboard.html" class="back-button">
+                    <i class="fas fa-arrow-left"></i>
                     <span>Log Out</span>
                 </a>
                 <div class="user-avatar" onclick="toggleAvatarDropdown()" title="User Profile">
@@ -60,19 +56,16 @@
         </div>
     </nav>
 
-    <!-- Theme Toggle Button -->
     <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
         <i class="fas fa-sun icon sun-icon"></i>
         <i class="fas fa-moon icon moon-icon"></i>
     </button>
 
-    <!-- Groups Section -->
     <section class="groups-section" id="groupsSection">
         <div class="groups-container">
             <h1 class="page-title">YOUR GROUPS</h1>
 
             <div class="groups-grid" id="groupsGrid">
-                <!-- Add New Group Card -->
                 <div class="add-group-card" onclick="showCreateGroupModal()">
                     <div class="add-group-icon">
                         <i class="fas fa-plus"></i>
@@ -83,7 +76,6 @@
         </div>
     </section>
 
-    <!-- Group Details Section (Hidden by default) -->
     <section class="group-details-section is-hidden" id="groupDetailsSection">
         <div class="group-details-container">
             <div class="back-button-container">
@@ -92,11 +84,16 @@
                     <span>Back to Groups</span>
                 </button>
             </div>
-            
+
             <div class="group-details-header">
                 <div class="group-details-avatar" id="groupDetailsAvatar"></div>
                 <div class="group-details-info">
-                    <h1 class="group-name" id="groupNameTitle"></h1>
+                    <div class="group-name-container">
+                        <h1 class="group-name" id="groupNameTitle"></h1>
+                        <button class="edit-group-name-btn" onclick="editGroupName()">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
                     <p class="group-members" id="groupMembers"></p>
                 </div>
             </div>
@@ -120,6 +117,9 @@
                 <button class="button is-primary is-medium" onclick="showAddPaymentModal()">
                     <i class="fas fa-exchange-alt"></i>
                     <span>Add Payments</span>
+                </button>
+                <button class="button is-primary is-medium" onclick="showAddMemberModal()">
+                    <i class="fas fa-user-plus"></i>
                 </button>
                 <button class="button is-primary is-medium" onclick="showAddExpenseModal()">
                     <i class="fas fa-plus"></i>
@@ -150,7 +150,6 @@
         </div>
     </section>
 
-    <!-- Create Group Modal -->
     <div id="createGroupModal" class="modal">
         <div class="modal-background"></div>
         <div class="modal-card">
@@ -180,7 +179,6 @@
                         </div>
                     </div>
 
-                    <!-- Dynamic form section based on category -->
                     <div id="dynamicFormSection"></div>
 
                     <div class="field mt-4">
@@ -194,7 +192,8 @@
                             </div>
                         </div>
                         <div class="control mt-2">
-                            <input class="input is-primary" type="text" id="addMemberInput" placeholder="Enter member email or username">
+                            <input class="input is-primary" type="text" id="addMemberInput"
+                                placeholder="Enter member email or username">
                         </div>
                         <p class="help">Press Enter to add a member</p>
                     </div>
@@ -207,7 +206,6 @@
         </div>
     </div>
 
-    <!-- Add Payment Modal -->
     <div id="addPaymentModal" class="modal">
         <div class="modal-background"></div>
         <div class="modal-card">
@@ -223,7 +221,6 @@
                             <div class="select is-fullwidth">
                                 <select id="paymentFrom" required>
                                     <option value="you">You</option>
-                                    <!-- Other members will be added here dynamically -->
                                 </select>
                             </div>
                         </div>
@@ -234,7 +231,6 @@
                             <div class="select is-fullwidth">
                                 <select id="paymentTo" required>
                                     <option value="you">You</option>
-                                    <!-- Other members will be added here dynamically -->
                                 </select>
                             </div>
                         </div>
@@ -254,7 +250,6 @@
         </div>
     </div>
 
-    <!-- Add Expense Modal -->
     <div id="addExpenseModal" class="modal">
         <div class="modal-background"></div>
         <div class="modal-card">
@@ -328,7 +323,6 @@
                     <div id="percentageSplitSection" class="field" style="display: none;">
                         <label class="label">Split by Percentage</label>
                         <div id="percentageInputs">
-                            <!-- Percentage inputs added dynamically -->
                         </div>
                     </div>
                     <div class="field">
@@ -346,11 +340,41 @@
         </div>
     </div>
 
-    <!-- Scripts -->
+    <div id="addMemberModal" class="modal">
+        <div class="modal-background"></div>
+        <div class="modal-card">
+            <header class="modal-card-head">
+                <p class="modal-card-title">Add Members</p>
+                <button class="delete" aria-label="close" onclick="closeAddMemberModal()"></button>
+            </header>
+            <section class="modal-card-body">
+                <form id="addMemberForm">
+                    <div class="field mt-4">
+                        <label class="label">Add Members</label>
+                        <div class="control">
+                            <div class="tags are-medium" id="modalMemberTags">
+                            </div>
+                        </div>
+                        <div class="control mt-2">
+                            <input class="input is-primary" type="text" id="addModalMemberInput"
+                                placeholder="Enter member email or username">
+                        </div>
+                        <p class="help">Press Enter to add a member</p>
+                    </div>
+                </form>
+            </section>
+            <footer class="modal-card-foot">
+                <button class="button is-primary" onclick="addMembersToGroup()">Done</button>
+                <button class="button" onclick="closeAddMemberModal()">Cancel</button>
+            </footer>
+        </div>
+    </div>
+
     <script src="./js/config.js"></script>
     <script src="./js/pwa.js"></script>
     <script src="./js/auth.js"></script>
     <script src="./js/main.js"></script>
     <script src="./js/dashboard.js"></script>
 </body>
+
 </html>
