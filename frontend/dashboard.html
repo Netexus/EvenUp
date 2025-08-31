@@ -37,10 +37,11 @@
             </div>
 
             <div class="nav-actions">
+                <a href="./profile.html" class="back-button" title="Profile">
+                    <i class="fas fa-user"></i>
+                </a>
                 <a href="#" id="logoutBtn" class="back-button" title="Log Out">
                     <i class="fas fa-arrow-right-from-bracket"></i>
-                <a href="./dashboard.html" class="back-button">
-                    <i class="fas fa-arrow-left"></i>
                     <span>Log Out</span>
                 </a>
                 <div class="user-avatar" onclick="toggleAvatarDropdown()" title="User Profile">
@@ -112,7 +113,6 @@
                     <span class="stat-label">You're Owed</span>
                 </div>
             </div>
-
             <div class="group-actions">
                 <button class="button is-primary is-medium" onclick="showAddPaymentModal()">
                     <i class="fas fa-exchange-alt"></i>
@@ -125,6 +125,56 @@
                     <i class="fas fa-plus"></i>
                     <span>Add Expenses</span>
                 </button>
+            </div>
+            <!-- Member Balances Section -->
+            <div class="member-balances-section" id="memberBalancesSection">
+                <div class="member-balances-header">
+                    <i class="fas fa-users"></i>
+                    <span>Member Balances</span>
+                </div>
+                <div class="member-balances-list" id="memberBalancesList">
+                    <div class="balance-item loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span>Loading balances...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Debt Breakdown Section -->
+            <div class="debt-breakdown-section" id="debtBreakdownSection">
+                <div class="debt-breakdown-header">
+                    <i class="fas fa-exchange-alt"></i>
+                    <span>Who Owes Whom</span>
+                </div>
+                <div class="debt-breakdown-list" id="debtBreakdownList">
+                    <div class="debt-item loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span>Loading debt breakdown...</span>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- Transaction History Section -->
+            <div class="transaction-history-section" id="transactionHistorySection">
+                <div class="transaction-history-header">
+                    <i class="fas fa-history"></i>
+                    <span>Transaction History</span>
+                </div>
+                
+                <div class="transaction-tabs">
+                    <button class="tab-button active" onclick="showTransactionTab('all')" id="tabAll">All</button>
+                    <button class="tab-button" onclick="showTransactionTab('expenses')" id="tabExpenses">Expenses</button>
+                    <button class="tab-button" onclick="showTransactionTab('payments')" id="tabPayments">Payments</button>
+                </div>
+
+                <div class="transaction-list" id="transactionList">
+                    <div class="transaction-item loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span>Loading transactions...</span>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
