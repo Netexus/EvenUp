@@ -945,7 +945,6 @@ try {
  */
 async function fetchGroupMembers(groupId) {
     try {
-        // Ajusta la URL si tu backend usa /api/expenses/group/:groupId/members
         const members = await apiFetch(`/expenses/group/${groupId}/members`);
         groupMembers = Array.isArray(members) ? members : [];
         return groupMembers;
@@ -956,10 +955,6 @@ async function fetchGroupMembers(groupId) {
     }
 }
 
-/**
- * Llama a fetchGroupMembers y actualiza los selects del modal de gastos.
- * @param {number} groupId - El ID del grupo.
- */
 async function prepareAddExpenseModal(groupId) {
     const members = await fetchGroupMembers(groupId);
     if (members.length < 1) {
@@ -971,9 +966,7 @@ async function prepareAddExpenseModal(groupId) {
     handleSplitMethodChange();
 }
 
-/**
- * Muestra el modal de agregar gasto y prepara los selects con los miembros.
- */
+// Muestra el modal y prepara los selects
 async function showAddExpenseModal() {
     const modal = document.getElementById('addExpenseModal');
     const groupId = getActiveGroupId();
