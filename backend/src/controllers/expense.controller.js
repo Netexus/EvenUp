@@ -1,10 +1,7 @@
 const { validationResult } = require('express-validator');
-const Expense = require('../models/expense.model');
+const { Expense, ExpensesSummaryModel, ExpenseDetailModel, GroupMembersModel } = require('../models/expense.model');
 const Participants = require('../models/expenseParticipants.model');
 const pool = require('../config/database');
-const ExpensesSummaryModel = require('../models/expense.model');
-const ExpenseDetailModel = require('../models/expense.model');
-const GroupMembersModel = require('../models/expense.model'); // Importa el modelo de miembros
 
 // Create an expense (optionally with participants array)
 const createExpense = async (req, res) => {

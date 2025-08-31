@@ -8,7 +8,7 @@ const Expense = {
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [group_id, paid_by, amount, description, category, date, expense_name]
     );
-    return this.getById(result.insertId);
+    return await Expense.getById(result.insertId);
   },
 
   async getById(expenseId) {
@@ -44,10 +44,10 @@ const Expense = {
         values.push(data[k]);
       }
     }
-    if (fields.length === 0) return this.getById(expenseId);
+    if (fields.length === 0) return await Expense.getById(expenseId);
     values.push(expenseId);
     await pool.execute(`UPDATE expenses SET ${fields.join(', ')} WHERE expense_id = ?`, values);
-    return this.getById(expenseId);
+    return await Expense.getById(expenseId);
   },
 
   async remove(expenseId) {
@@ -57,7 +57,7 @@ const Expense = {
 };
 
 const ExpensesSummaryModel = {
-  getExpensesByGroupForUser: async (groupId, userId) => {
+  async getExpensesByGroupForUser(groupId, userId) {
     const query = `
       SELECT
         e.expense_name,
@@ -77,14 +77,13 @@ const ExpensesSummaryModel = {
       WHERE e.group_id = ?
       ORDER BY e.date DESC;
     `;
-
     const [rows] = await pool.query(query, [userId, userId, groupId]);
     return rows;
   }
 };
 
 const ExpenseDetailModel = {
-  getExpenseDetail: async (expenseId) => {
+  async getExpenseDetail(expenseId) {
     const query = `
       SELECT
         e.expense_name,
@@ -108,7 +107,6 @@ const ExpenseDetailModel = {
       GROUP BY
         e.expense_id, e.expense_name, e.amount, e.date, e.description, e.category, u.name;
     `;
-
     const [rows] = await pool.query(query, [expenseId]);
     return rows[0];
   }
@@ -127,7 +125,9 @@ const GroupMembersModel = {
   }
 };
 
-module.exports = ExpenseDetailModel;
-module.exports = ExpensesSummaryModel;
-module.exports = Expense;
-module.exports = GroupMembersModel;
+module.exports = {
+  Expense,
+  ExpensesSummaryModel,
+  ExpenseDetailModel,
+  GroupMembersModel
+};
