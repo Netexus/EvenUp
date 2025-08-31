@@ -448,42 +448,94 @@ function closeAddMemberModal() {
  * Handles adding new members to the group after the modal is closed.
  */
 async function addMembersToGroup() {
-    const newMembers = getMembers('modalMemberTags');
-    const existingMemberNames = currentGroup.members.map(m => m.name);
+    // Get the users from the tags in the modal
+    const modalMemberTags = document.querySelectorAll('#modalMemberTags .tag');
+    const memberNames = Array.from(modalMemberTags).map(tag => tag.textContent.trim().replace(/\s*×\s*$/, ''));
     
-    // Add only new members to the group
-    for (const memberName of newMembers) {
-      if (!existingMemberNames.includes(memberName)) {
+    const usersToAdd = [];
+    const notFound = [];
+
+    // Filter out users that are already in the group or are the current user
+    const existingMemberIds = currentGroup.members.map(m => m.id);
+    const currentUser = CURRENT_USER_ID();
+    
+    for (const name of memberNames) {
+        // If it's the current user, skip and continue
+        if (name.toLowerCase() === 'you') continue;
+
         try {
-          const userMatches = await apiFetch(`/users/search?query=${encodeURIComponent(memberName)}`);
-          const user = Array.isArray(userMatches) ? userMatches[0] : null;
-          if (user) {
-            await apiFetch('/memberships', { method: 'POST', body: { group_id: currentGroup.id, user_id: user.user_id } });
-            currentGroup.members.push({ id: user.user_id, name: user.username });
-          }
+            const userMatches = await apiFetch(`/users/search?query=${encodeURIComponent(name)}&limit=1`);
+            const user = Array.isArray(userMatches) ? userMatches[0] : null;
+
+            // Check if the user exists and isn't already a member
+            if (user && user.user_id && !existingMemberIds.includes(user.user_id) && user.user_id !== currentUser) {
+                usersToAdd.push(user);
+                existingMemberIds.push(user.user_id); // Prevent adding duplicates in this session
+            } else if (!user) {
+                notFound.push(name);
+            }
         } catch (e) {
-          showNotification(`Failed to add member ${memberName}: ${e.message}`, 'error');
+            notFound.push(name);
         }
-      }
+    }
+
+    if (notFound.length > 0) {
+        showNotification(`The following members were not found or couldn't be added: ${notFound.join(', ')}`, 'error');
     }
     
-    // Update the member count on the details page
-    document.getElementById('groupMembers').textContent = `${currentGroup.members.length} members`;
-    showNotification('Members added successfully!', 'success');
-    closeAddMemberModal();
-}
+    // Check if there are any new members to add to the group
+    if (usersToAdd.length > 0) {
+        try {
+            const memberships = usersToAdd.map(u => ({ group_id: currentGroup.id, user_id: u.user_id }));
+            
+            // Loop through and add each member to the group via the API
+            for (const member of memberships) {
+                await apiFetch('/memberships', { method: 'POST', body: member });
+            }
 
+            // Update the local state with the newly added members
+            const newMembersData = usersToAdd.map(u => ({ id: u.user_id, name: u.username }));
+            currentGroup.members = [...currentGroup.members, ...newMembersData];
+
+            // Update the member count on the details page
+            document.getElementById('groupMembers').textContent = `${currentGroup.members.length} members`;
+            
+            showNotification('Members added successfully!', 'success');
+        } catch (e) {
+            showNotification(`An error occurred while adding members: ${e.message}`, 'error');
+        }
+    }
+    
+    closeAddMemberModal();
+    // After adding members and closing the modal, you should refresh the group details view
+    await loadAndShowGroupDetails(currentGroup.id);
+}
 /**
  * Handles editing the group name.
- * Prompts the user for a new name and updates the UI.
+ * Prompts the user for a new name and updates the UI and backend.
  */
-function editGroupName() {
+async function editGroupName() {
     const newName = prompt("Enter a new name for the group:", currentGroup.name);
-    if (newName && newName.trim() !== "") {
-        currentGroup.name = newName.trim();
-        document.getElementById('groupNameTitle').textContent = currentGroup.name;
-        document.getElementById('groupDetailsAvatar').textContent = currentGroup.name.substring(0, 2).toUpperCase();
-        showNotification(`Group name changed to "${currentGroup.name}"`, 'success');
+    if (newName && newName.trim() !== "" && newName.trim() !== currentGroup.name) {
+        try {
+            // Update the name in the backend
+            await apiFetch(`/expense_groups/${currentGroup.id || currentGroup.group_id}`, { 
+                method: 'PUT',
+                body: { group_name: newName.trim() } 
+            });
+
+            // Update the local state
+            currentGroup.name = newName.trim();
+            document.getElementById('groupNameTitle').textContent = currentGroup.name;
+            document.getElementById('groupDetailsAvatar').textContent = currentGroup.name.substring(0, 2).toUpperCase();
+            
+            // Re-render the dashboard to reflect the change
+            await loadUserGroups();
+
+            showNotification(`Group name changed to "${currentGroup.name}"`, 'success');
+        } catch (e) {
+            showNotification(`Failed to update group name: ${e.message}`, 'error');
+        }
     }
 }
 

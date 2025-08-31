@@ -82,14 +82,16 @@
                     <span>Back to Groups</span>
                 </button>
             </div>
-            
+
             <div class="group-details-header">
                 <div class="group-details-avatar" id="groupDetailsAvatar"></div>
                 <div class="group-details-info">
-                    <h1 class="group-name" id="groupNameTitle"></h1>
-                    <button class="edit-group-name-btn" onclick="editGroupName()">
-                        <i class="fas fa-edit"></i>
-                    </button>
+                    <div class="group-name-container">
+                        <h1 class="group-name" id="groupNameTitle"></h1>
+                        <button class="edit-group-name-btn" onclick="editGroupName()">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
                     <p class="group-members" id="groupMembers"></p>
                 </div>
             </div>
@@ -167,7 +169,8 @@
                             </div>
                         </div>
                         <div class="control mt-2">
-                            <input class="input is-primary" type="text" id="addMemberInput" placeholder="Enter member email or username">
+                            <input class="input is-primary" type="text" id="addMemberInput"
+                                placeholder="Enter member email or username">
                         </div>
                         <p class="help">Press Enter to add a member</p>
                     </div>
@@ -195,7 +198,7 @@
                             <div class="select is-fullwidth">
                                 <select id="paymentFrom" required>
                                     <option value="you">You</option>
-                                    </select>
+                                </select>
                             </div>
                         </div>
                     </div>
@@ -205,7 +208,7 @@
                             <div class="select is-fullwidth">
                                 <select id="paymentTo" required>
                                     <option value="you">You</option>
-                                    </select>
+                                </select>
                             </div>
                         </div>
                     </div>
@@ -268,7 +271,7 @@
                         <div class="control">
                             <div class="select is-fullwidth">
                                 <select id="expenseMembers" multiple size="4" required>
-                                    </select>
+                                </select>
                             </div>
                         </div>
                     </div>
@@ -288,7 +291,7 @@
                     <div id="percentageSplitSection" class="field" style="display: none;">
                         <label class="label">Split by Percentage</label>
                         <div id="percentageInputs">
-                            </div>
+                        </div>
                     </div>
                 </form>
             </section>
