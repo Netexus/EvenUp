@@ -32,7 +32,7 @@ exports.register = async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, salt);
 
         // Insertar usuario (incluye birthdate requerido por el esquema)
-        const [result] = await pool.execute(
+        const [result] = await pool.query(
             'INSERT INTO app_users (name, username, phone, email, birthdate, password_hash) VALUES (?, ?, ?, ?, ?, ?)',
             [fullName, username, phoneNumber, email, birthDate, hashedPassword]
         );
