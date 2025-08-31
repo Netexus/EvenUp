@@ -257,6 +257,9 @@ try {
   };
   try { localStorage.setItem('active_group_id', String(group.group_id)); } catch (_) {}
   showGroupDetails(group);
+  
+  // Load transaction history for this group
+  await loadTransactionHistory(groupId);
 } catch (e) {
   showNotification('Failed to load group details', 'error');
 }
@@ -428,9 +431,138 @@ function closeAddExpenseModal() {
   document.getElementById('addExpenseForm').reset();
 }
 
-// ========================================
-// DYNAMIC FORM MANAGEMENT
-// ========================================
+/**
+ * Shows the add members modal and populates it with current members.
+ */
+function showAddMemberModal() {
+    const modal = document.getElementById('addMemberModal');
+    if (modal) {
+        // Clear previous tags and populate with existing members
+        const memberTagsContainer = document.getElementById('modalMemberTags');
+        memberTagsContainer.innerHTML = '';
+
+        currentGroup.members.forEach(member => {
+            addMemberToTags(member.name, 'modalMemberTags');
+        });
+        
+        // Add event listener for the modal's input
+        const addMemberInput = document.getElementById('addModalMemberInput');
+        if (addMemberInput) {
+            // Remove previous event listener to prevent duplicates
+            const oldHandler = addMemberInput.onkeydown;
+            if (oldHandler) addMemberInput.removeEventListener('keydown', oldHandler);
+            
+            addMemberInput.addEventListener('keydown', (e) => handleAddMember(e, 'modalMemberTags'));
+        }
+
+        modal.classList.add('is-active');
+    }
+}
+
+/**
+ * Closes the add member modal.
+ */
+function closeAddMemberModal() {
+    const modal = document.getElementById('addMemberModal');
+    if (modal) {
+        modal.classList.remove('is-active');
+    }
+}
+
+/**
+ * Handles adding new members to the group after the modal is closed.
+ */
+async function addMembersToGroup() {
+    // Get the users from the tags in the modal
+    const modalMemberTags = document.querySelectorAll('#modalMemberTags .tag');
+    const memberNames = Array.from(modalMemberTags).map(tag => tag.textContent.trim().replace(/\s*×\s*$/, ''));
+    
+    const usersToAdd = [];
+    const notFound = [];
+
+    // Filter out users that are already in the group or are the current user
+    const existingMemberIds = currentGroup.members.map(m => m.id);
+    const currentUser = CURRENT_USER_ID();
+    
+    for (const name of memberNames) {
+        // If it's the current user, skip and continue
+        if (name.toLowerCase() === 'you') continue;
+
+        try {
+            const userMatches = await apiFetch(`/users/search?query=${encodeURIComponent(name)}&limit=1`);
+            const user = Array.isArray(userMatches) ? userMatches[0] : null;
+
+            // Check if the user exists and isn't already a member
+            if (user && user.user_id && !existingMemberIds.includes(user.user_id) && user.user_id !== currentUser) {
+                usersToAdd.push(user);
+                existingMemberIds.push(user.user_id); // Prevent adding duplicates in this session
+            } else if (!user) {
+                notFound.push(name);
+            }
+        } catch (e) {
+            notFound.push(name);
+        }
+    }
+
+    if (notFound.length > 0) {
+        showNotification(`The following members were not found or couldn't be added: ${notFound.join(', ')}`, 'error');
+    }
+    
+    // Check if there are any new members to add to the group
+    if (usersToAdd.length > 0) {
+        try {
+            const memberships = usersToAdd.map(u => ({ group_id: currentGroup.id, user_id: u.user_id }));
+            
+            // Loop through and add each member to the group via the API
+            for (const member of memberships) {
+                await apiFetch('/memberships', { method: 'POST', body: member });
+            }
+
+            // Update the local state with the newly added members
+            const newMembersData = usersToAdd.map(u => ({ id: u.user_id, name: u.username }));
+            currentGroup.members = [...currentGroup.members, ...newMembersData];
+
+            // Update the member count on the details page
+            document.getElementById('groupMembers').textContent = `${currentGroup.members.length} members`;
+            
+            showNotification('Members added successfully!', 'success');
+        } catch (e) {
+            showNotification(`An error occurred while adding members: ${e.message}`, 'error');
+        }
+    }
+    
+    closeAddMemberModal();
+    // After adding members and closing the modal, you should refresh the group details view
+    await loadAndShowGroupDetails(currentGroup.id);
+}
+/**
+ * Handles editing the group name.
+ * Prompts the user for a new name and updates the UI and backend.
+ */
+async function editGroupName() {
+    const newName = prompt("Enter a new name for the group:", currentGroup.name);
+    if (newName && newName.trim() !== "" && newName.trim() !== currentGroup.name) {
+        try {
+            // Update the name in the backend
+            await apiFetch(`/expense_groups/${currentGroup.id || currentGroup.group_id}`, { 
+                method: 'PUT',
+                body: { group_name: newName.trim() } 
+            });
+
+            // Update the local state
+            currentGroup.name = newName.trim();
+            document.getElementById('groupNameTitle').textContent = currentGroup.name;
+            document.getElementById('groupDetailsAvatar').textContent = currentGroup.name.substring(0, 2).toUpperCase();
+            
+            // Re-render the dashboard to reflect the change
+            await loadUserGroups();
+
+            showNotification(`Group name changed to "${currentGroup.name}"`, 'success');
+        } catch (e) {
+            showNotification(`Failed to update group name: ${e.message}`, 'error');
+        }
+    }
+}
 
 /**
 * Handles the change event of the group category select dropdown.
@@ -967,6 +1099,10 @@ if (from === to) {
 
 try {
   await apiFetch('/settlements', { method: 'POST', body: { group_id, from_user: from, to_user: to, amount } });
+  
+  // Check if all debts in the group are now settled
+  await checkAndResetGroupBalances(group_id);
+  
   showNotification('Payment recorded successfully!', 'success');
   closeAddPaymentModal();
   await loadAndShowGroupDetails(group_id);
@@ -975,6 +1111,249 @@ try {
 }
 }
 
+
+// ========================================
+// TRANSACTION HISTORY FUNCTIONS
+// ========================================
+
+let currentHistoryFilter = 'all';
+let transactionHistory = [];
+let isHistoryArchived = false;
+
+/**
+* Loads and displays the transaction history for the current group.
+* @param {number} groupId - The ID of the group.
+*/
+async function loadTransactionHistory(groupId) {
+  try {
+    let expenses = [];
+    let payments = [];
+    
+    // Try to load expenses with fallback routes
+    try {
+      expenses = await apiFetch(`/expenses/group/${groupId}`);
+    } catch (expErr) {
+      console.warn('Primary expenses route failed, trying fallback:', expErr);
+      try {
+        expenses = await apiFetch(`/expenses?group_id=${groupId}`);
+      } catch (expErr2) {
+        console.warn('Expenses fallback route also failed:', expErr2);
+        expenses = [];
+      }
+    }
+    
+    // Try to load payments with fallback routes
+    try {
+      payments = await apiFetch(`/settlements/group/${groupId}`);
+    } catch (payErr) {
+      console.warn('Primary settlements route failed, trying fallback:', payErr);
+      try {
+        payments = await apiFetch(`/settlements?group_id=${groupId}`);
+      } catch (payErr2) {
+        console.warn('Settlements fallback route also failed:', payErr2);
+        payments = [];
+      }
+    }
+
+    // Ensure we have arrays
+    expenses = Array.isArray(expenses) ? expenses : [];
+    payments = Array.isArray(payments) ? payments : [];
+
+    // Combine and sort transactions by date
+    const allTransactions = [
+      ...expenses.map(exp => ({
+        ...exp,
+        type: 'expense',
+        date: exp.date || exp.created_at || new Date().toISOString(),
+        amount: exp.amount || 0,
+        description: exp.expense_name || exp.description || 'Expense',
+        user_name: exp.paid_by_name || exp.payer_name || 'Unknown'
+      })),
+      ...payments.map(pay => ({
+        ...pay,
+        type: 'payment',
+        date: pay.created_at || pay.settlement_date || new Date().toISOString(),
+        amount: pay.amount || 0,
+        description: `Payment from ${pay.from_user_name || 'Unknown'} to ${pay.to_user_name || 'Unknown'}`,
+        user_name: pay.from_user_name || 'Unknown'
+      }))
+    ].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    transactionHistory = allTransactions;
+    renderTransactionHistory();
+    
+    console.log(`Loaded ${expenses.length} expenses and ${payments.length} payments for group ${groupId}`);
+  } catch (err) {
+    console.error('Failed to load transaction history:', err);
+    // Show a more user-friendly message when there are no transactions yet
+    document.getElementById('transactionList').innerHTML = `
+      <div class="empty-history">
+        <i class="fas fa-receipt"></i>
+        <p>No transactions yet</p>
+        <p class="is-size-7">Start by adding an expense or recording a payment</p>
+      </div>
+    `;
+  }
+}
+
+/**
+* Renders the transaction history based on current filter.
+*/
+function renderTransactionHistory() {
+  const container = document.getElementById('transactionList');
+  
+  // Filter transactions based on current filter
+  let filteredTransactions = transactionHistory;
+  if (currentHistoryFilter !== 'all') {
+    filteredTransactions = transactionHistory.filter(t => {
+      if (currentHistoryFilter === 'expenses') return t.type === 'expense';
+      if (currentHistoryFilter === 'payments') return t.type === 'payment';
+      return true;
+    });
+  }
+
+  // Show archived notice if applicable
+  let html = '';
+  if (isHistoryArchived) {
+    html += `
+      <div class="history-archived">
+        <h3><i class="fas fa-archive"></i> Settlement Complete</h3>
+        <p>All debts have been settled. This history has been archived for your records.</p>
+      </div>
+    `;
+  }
+
+  if (filteredTransactions.length === 0) {
+    html += `
+      <div class="empty-history">
+        <i class="fas fa-receipt"></i>
+        <p>No ${currentHistoryFilter === 'all' ? '' : currentHistoryFilter} transactions yet</p>
+        <p class="is-size-7">Start by adding an expense or recording a payment</p>
+      </div>
+    `;
+  } else {
+    filteredTransactions.forEach(transaction => {
+      const icon = transaction.type === 'expense' ? 'fas fa-shopping-cart' : 'fas fa-exchange-alt';
+      const formattedDate = new Date(transaction.date).toLocaleDateString();
+      const formattedTime = new Date(transaction.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+      
+      html += `
+        <div class="transaction-item ${transaction.type}">
+          <div class="transaction-info">
+            <div class="transaction-icon ${transaction.type}">
+              <i class="${icon}"></i>
+            </div>
+            <div class="transaction-details">
+              <h4>${transaction.description}</h4>
+              <p>By ${transaction.user_name} • ${formattedDate} at ${formattedTime}</p>
+              ${transaction.category ? `<p class="is-size-7"><i class="fas fa-tag"></i> ${transaction.category}</p>` : ''}
+            </div>
+          </div>
+          <div class="transaction-amount">
+            <div class="amount ${transaction.type === 'expense' ? 'negative' : 'positive'}">
+              ${transaction.type === 'expense' ? '-' : '+'}$${Number(transaction.amount).toFixed(2)}
+            </div>
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  container.innerHTML = html;
+  updateFilterButtons();
+}
+
+/**
+* Filters the transaction history display.
+* @param {string} filter - The filter type ('all', 'expenses', 'payments').
+*/
+function filterHistory(filter) {
+  currentHistoryFilter = filter;
+  renderTransactionHistory();
+}
+
+/**
+* Updates the active state of filter buttons.
+*/
+function updateFilterButtons() {
+  document.querySelectorAll('.history-filters .button').forEach(btn => {
+    btn.classList.remove('is-active');
+  });
+  document.getElementById(`filter${currentHistoryFilter.charAt(0).toUpperCase() + currentHistoryFilter.slice(1)}`).classList.add('is-active');
+}
+
+/**
+* Archives the transaction history when all debts are settled.
+*/
+function archiveTransactionHistory() {
+  isHistoryArchived = true;
+  renderTransactionHistory();
+}
+
+/**
+* Checks if all debts in a group are settled and resets balances if needed.
+* @param {number} groupId - The ID of the group to check.
+*/
+async function checkAndResetGroupBalances(groupId) {
+  try {
+    // Get all members in the group
+    const members = (currentGroup && currentGroup.members) || [];
+    if (members.length < 2) return; // Need at least 2 members to have debts
+    
+    let allBalancesZero = true;
+    const memberBalances = [];
+    
+    // Check each member's balance
+    for (const member of members) {
+      const memberId = member.id || member.user_id;
+      try {
+        const balance = await apiFetch(`/settlements/balance/group/${groupId}/user/${memberId}`);
+        const netBalance = Number(balance?.net ?? balance?.balance ?? balance?.amount ?? 0);
+        memberBalances.push({ memberId, balance: netBalance, name: member.name });
+        
+        // If any member has a non-zero balance (more than 1 cent), not all debts are settled
+        if (Math.abs(netBalance) > 0.01) {
+          allBalancesZero = false;
+        }
+      } catch (err) {
+        console.warn(`Failed to get balance for member ${memberId}:`, err);
+        allBalancesZero = false; // If we can't check, assume not settled
+      }
+    }
+    
+    // If all balances are zero, create a settlement completion record
+    if (allBalancesZero && memberBalances.length > 1) {
+      try {
+        await apiFetch('/settlements/group-complete', { 
+          method: 'POST', 
+          body: { 
+            group_id: groupId,
+            settlement_date: new Date().toISOString(),
+            all_members_settled: true,
+            final_balances: memberBalances
+          } 
+        });
+        
+        showNotification('🎉 All debts settled! Group balances have been reset.', 'success');
+        
+        // Archive the transaction history
+        archiveTransactionHistory();
+        
+        // Force refresh the group details to show updated balances
+        setTimeout(async () => {
+          await loadAndShowGroupDetails(groupId);
+        }, 1000);
+        
+      } catch (resetErr) {
+        console.warn('Failed to record group settlement completion:', resetErr);
+        // Don't show error to user as the payment was still successful
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to check group balances:', err);
+    // Don't show error to user as the payment was still successful
+  }
+}
 
 // ========================================
 // UTILITY FUNCTIONS (Reused from main.js)
@@ -1106,6 +1485,7 @@ window.addExpense = addExpense;
 window.addPayment = addPayment;
 window.showDashboard = showDashboard;
 window.toggleTheme = window.toggleTheme || toggleTheme;
+window.filterHistory = filterHistory;
 } catch (_) {}
 
 // ========================================

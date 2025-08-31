@@ -126,6 +126,27 @@
                     <span>Add Expenses</span>
                 </button>
             </div>
+
+            <!-- Transaction History Section -->
+            <div class="transaction-history-section" id="transactionHistorySection">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-history"></i>
+                        Transaction History
+                    </h2>
+                    <div class="history-filters">
+                        <button class="button is-small" id="filterAll" onclick="filterHistory('all')">All</button>
+                        <button class="button is-small" id="filterExpenses" onclick="filterHistory('expenses')">Expenses</button>
+                        <button class="button is-small" id="filterPayments" onclick="filterHistory('payments')">Payments</button>
+                    </div>
+                </div>
+                <div class="transaction-list" id="transactionList">
+                    <div class="loading-placeholder">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        Loading transactions...
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
 
