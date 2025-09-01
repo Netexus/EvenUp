@@ -47,6 +47,281 @@
     --transition-slow: 0.5s ease;
 }
 
+/* Member Balances Styles */
+.member-balances-section {
+  margin-top: 1.5rem;
+  background: var(--card-bg);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.member-balances-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+}
+
+.member-balances-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.balance-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: var(--bg-primary);
+  border-radius: 8px;
+  border-left: 4px solid var(--primary-color);
+}
+
+.balance-item.loading {
+  justify-content: center;
+  gap: 0.5rem;
+  color: var(--text-secondary);
+}
+
+.balance-user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.balance-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--primary-color);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.balance-amount {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.balance-amount.positive {
+  color: #00d1b2;
+}
+
+.balance-amount.negative {
+  color: #ff3860;
+}
+
+.balance-amount.zero {
+  color: var(--text-secondary);
+}
+
+/* Debt Breakdown Styles */
+.debt-breakdown-section {
+  margin-top: 1.5rem;
+  background: var(--card-bg);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.debt-breakdown-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+}
+
+.debt-breakdown-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.debt-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: var(--bg-primary);
+  border-radius: 8px;
+  border-left: 4px solid #ff3860;
+}
+
+.debt-item.loading {
+  justify-content: center;
+  gap: 0.5rem;
+  color: var(--text-secondary);
+  border-left-color: var(--primary-color);
+}
+
+.debt-item.you-owe {
+  border-left-color: #ff3860;
+  background: rgba(255, 56, 96, 0.05);
+}
+
+.debt-item.owes-you {
+  border-left-color: #00d1b2;
+  background: rgba(0, 209, 178, 0.05);
+}
+
+.debt-description {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.debt-arrow {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.debt-amount {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.debt-amount.you-owe {
+  color: #ff3860;
+}
+
+.debt-amount.owes-you {
+  color: #00d1b2;
+}
+
+/* Transaction History Styles */
+.transaction-history-section {
+  margin-top: 2rem;
+  background: var(--card-bg);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.transaction-history-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+}
+
+.transaction-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--bg-secondary);
+    padding-bottom: 0.5rem;
+}
+
+.tab-button {
+    background: none;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: var(--transition-fast);
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.tab-button.active {
+    background: var(--primary-color);
+    color: var(--text-dark);
+}
+
+.tab-button:hover:not(.active) {
+    background: var(--bg-secondary);
+}
+
+.transaction-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.transaction-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border-bottom: 1px solid var(--bg-secondary);
+    transition: var(--transition-fast);
+}
+
+.transaction-item:hover {
+    background: var(--bg-primary);
+}
+
+.transaction-item:last-child {
+    border-bottom: none;
+}
+
+.transaction-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    color: white;
+}
+
+.transaction-icon.expense {
+    background: #ff6b6b;
+}
+
+.transaction-icon.payment {
+    background: #51cf66;
+}
+
+.transaction-details {
+    flex: 1;
+}
+
+.transaction-title {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.transaction-meta {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.transaction-amount {
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.transaction-amount.positive {
+    color: #51cf66;
+}
+
+.transaction-amount.negative {
+    color: #ff6b6b;
+}
+
+.transaction-item.loading {
+    justify-content: center;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
 /* Dark Theme Variables */
 [data-theme="dark"] {
     --secondary-color: #f1f5f9;
@@ -706,6 +981,26 @@ body {
 }
 
 /* Auth Cards */
+
+/* Scrollbar Styling */
+.signup-card::-webkit-scrollbar {
+    width: 6px;
+}
+
+.signup-card::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.signup-card::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 3px;
+    opacity: 0.5;
+}
+
+.signup-card::-webkit-scrollbar-thumb:hover {
+    opacity: 1;
+}
+
 .login-card,
 .signup-card {
     position: relative;
@@ -1136,6 +1431,23 @@ body {
 }
 
 /* Modal Styles */
+/* Hide scrollbar for Chrome, Safari and Opera */
+.modal-card-body::-webkit-scrollbar {
+    display: none;
+}
+
+/* Hide scrollbar for Firefox */
+.modal-card-body {
+    scrollbar-width: none; /* Firefox */
+}
+
+.modal-card {
+    display: flex;
+    flex-direction: column;
+    max-height: 70vh; /* Sets a maximum height for the modal */
+    width: 90%; /* Adjusts the width for better responsiveness */
+}
+
 .modal-card-head,
 .modal-card-foot {
     background: var(--card-bg);
@@ -1151,6 +1463,11 @@ body {
     background: var(--card-bg);
     backdrop-filter: blur(20px);
     color: var(--text-secondary);
+}
+
+.modal-card-body {
+    flex-grow: 1; 
+    overflow-y: scroll; 
 }
 
 /* Form input styles for modal */
@@ -1206,6 +1523,39 @@ body {
     transform: scale(1.1);
 }
 
+/* Styling for the new group name edit button */
+.edit-group-name-btn {
+    background: none;
+    border: none;
+    color: var(--primary-color);
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    padding: 0 0.5rem;
+    vertical-align: middle;
+}
+
+.edit-group-name-btn:hover {
+    transform: scale(1.1);
+}
+
+/* Add spacing between the back button and the group info */
+.back-button-container {
+    margin-bottom: var(--spacing-xxl);
+}
+
+/* Adjust layout for the group details header to align items */
+.group-details-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.group-details-info h1 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
 /* Responsive Styles */
 
 /* Large Tablets and Small Desktops */
@@ -1239,6 +1589,16 @@ body {
         --spacing-xxl: 2rem;
     }
 
+    /* Ensure modal content is scrollable on small screens */
+    .modal-card {
+        max-height: 80vh;
+        height: 100%;
+    }
+
+    .modal-card-body {
+        overflow-y: scroll;
+    }
+    
     .navbar .container {
         padding: 0 var(--spacing-md);
     }
@@ -1393,6 +1753,14 @@ body {
         flex-direction: column;
         text-align: center;
     }
+
+    .group-actions {
+        flex-direction: column;
+    }
+
+    .group-actions .button {
+        width: 100%;
+    }
 }
 
 /* Mobile Landscape */
@@ -1415,6 +1783,15 @@ body {
         height: 45px;
         font-size: 1.2rem;
     }
+    
+    .group-actions {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .group-actions .button {
+        width: 45%;
+    }
 }
 
 /* Small Mobile Devices */
@@ -1426,6 +1803,15 @@ body {
         --spacing-lg: 0.75rem;
         --spacing-xl: 1rem;
         --spacing-xxl: 1.5rem;
+    }
+
+    /* Adjustments for horizontal mobile view */
+    .group-actions {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    .group-actions .button {
+        width: 100%;
     }
 
     html {
@@ -1807,4 +2193,3 @@ body {
         border: 1px solid #ccc !important;
     }
 }
-

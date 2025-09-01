@@ -1,7 +1,7 @@
 /**
  * PWA Functionality for EvenUp
- * Handles Service Worker management, installation prompts, and updates
- * This is the ONLY file that should handle PWA functionality to prevent duplicates
+ * Handles Service Worker management, installation prompts, and updates.
+ * This file is the ONLY one that should handle PWA functionality.
  */
 
 class PWAManager {
@@ -33,7 +33,7 @@ class PWAManager {
             try {
                 const registration = await navigator.serviceWorker.register('/sw.js');
                 console.log('Service Worker registered:', registration);
-                
+
                 registration.addEventListener('updatefound', () => {
                     this.handleServiceWorkerUpdate(registration);
                 });
@@ -47,7 +47,7 @@ class PWAManager {
 
     handleServiceWorkerUpdate(registration) {
         const newWorker = registration.installing;
-        
+
         newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                 this.showUpdateNotification();
@@ -74,6 +74,7 @@ class PWAManager {
     }
 
     showInstallBanner() {
+        // Prevent showing the banner if it's already shown or exists
         if (this.isInstallBannerShown || document.getElementById('pwa-install-banner')) {
             return;
         }
@@ -120,9 +121,9 @@ class PWAManager {
         try {
             this.deferredPrompt.prompt();
             const { outcome } = await this.deferredPrompt.userChoice;
-            
+
             console.log(`User response: ${outcome}`);
-            
+
             if (outcome === 'accepted') {
                 console.log('User accepted PWA installation');
             } else {
@@ -254,7 +255,7 @@ class PWAManager {
     showConnectionStatus(status) {
         const statusBar = document.createElement('div');
         statusBar.className = `connection-status ${status}`;
-        statusBar.innerHTML = status === 'online' 
+        statusBar.innerHTML = status === 'online'
             ? '<i class="fas fa-wifi"></i> Connection restored'
             : '<i class="fas fa-wifi-slash"></i> No connection - Offline mode';
 
@@ -409,13 +410,13 @@ class PWAManager {
                     left: 10px;
                     right: 10px;
                 }
-                
+
                 .pwa-banner-content {
                     flex-direction: column;
                     text-align: center;
                     gap: 15px;
                 }
-                
+
                 .pwa-banner-actions {
                     width: 100%;
                     justify-content: center;
@@ -433,8 +434,7 @@ class PWAManager {
 // INITIALIZATION
 // ========================================
 
+// Wait for the DOM to be fully loaded before initializing
 document.addEventListener('DOMContentLoaded', () => {
     window.pwaManager = new PWAManager();
 });
-
-window.PWAManager = PWAManager;

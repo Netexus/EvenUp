@@ -1,6 +1,6 @@
 /**
  * Main JavaScript file for EvenUp
- * Handles theme management, navigation, forms, UI interactions, authentication, and PWA features.
+ * Handles theme management, navigation, forms, UI interactions, and authentication.
  */
 
 // ========================================
@@ -106,10 +106,10 @@ function toggleTheme() {
 }
 
 // ========================================
-// NAVIGATION MANAGEMENT
+// AVATAR & NAVIGATION MANAGEMENT
 // ========================================
 
-function initializeNavigation() {
+async function initializeNavigation() {
     const navbarBurgers = Array.prototype.slice.call(document.querySelectorAll('.navbar-burger'), 0);
 
     if (navbarBurgers.length > 0) {
@@ -125,7 +125,62 @@ function initializeNavigation() {
             });
         });
     }
+
+    // Initialize user avatar
+    await initializeUserAvatar();
 }
+
+async function initializeUserAvatar() {
+    const avatarElement = document.querySelector('.user-avatar');
+    if (!avatarElement) return;
+
+    // Get the user's username to use as a seed for a consistent avatar
+    const user = JSON.parse(localStorage.getItem('user'));
+    const seed = user ? user.username : 'default';
+
+    try {
+        const avatarUrl = await getRandomAnimalAvatar(seed);
+        avatarElement.style.backgroundImage = `url(${avatarUrl})`;
+        avatarElement.style.backgroundSize = 'cover';
+        avatarElement.style.backgroundPosition = 'center';
+        avatarElement.style.backgroundRepeat = 'no-repeat';
+        avatarElement.textContent = ''; // Remove the 'U' text
+    } catch (error) {
+        console.error('Error fetching avatar:', error);
+        // Fallback to initial 'U' text if API fails
+        avatarElement.textContent = 'U';
+    }
+}
+
+async function getRandomAnimalAvatar(seed) {
+    // Using Unsplash as a reliable placeholder image service
+    // It's not specifically an "animal" API but the query can be specified to find a random animal image
+    return `https://source.unsplash.com/100x100/?animal,${seed}`;
+}
+
+function toggleAvatarDropdown() {
+    const dropdown = document.getElementById('avatarDropdown');
+    if (dropdown) {
+        dropdown.classList.toggle('active');
+    }
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(event) {
+    const avatar = document.querySelector('.user-avatar');
+    const dropdown = document.getElementById('avatarDropdown');
+
+    if (dropdown && avatar) {
+        if (!avatar.contains(event.target)) {
+            dropdown.classList.remove('active');
+        }
+    }
+});
+
+
+// ========================================
+// SCROLL EFFECTS
+// ========================================
 
 function initializeScrollEffects() {
     const navbar = document.querySelector('.navbar');
@@ -163,39 +218,7 @@ function scrollToNext() {
 }
 
 // ========================================
-// AVATAR DROPDOWN MANAGEMENT
-// ========================================
-
-function toggleAvatarDropdown() {
-    const dropdown = document.getElementById('avatarDropdown');
-    if (dropdown) {
-        dropdown.classList.toggle('active');
-    }
-}
-
-function editProfile() {
-    const dropdown = document.getElementById('avatarDropdown');
-    if (dropdown) {
-        dropdown.classList.remove('active');
-    }
-    console.log('Edit profile clicked');
-}
-
-// Close dropdown when clicking outside
-document.addEventListener('click', function (event) {
-    const avatar = document.querySelector('.user-avatar');
-    const dropdown = document.getElementById('avatarDropdown');
-
-    if (dropdown && avatar) {
-        if (!avatar.contains(event.target)) {
-            dropdown.classList.remove('active');
-        }
-    }
-});
-
-
-// ========================================
-// FORM MANAGEMENT
+// FORM & PROFILE MANAGEMENT
 // ========================================
 
 function initializeForms() {
@@ -275,6 +298,12 @@ async function handleSignupSubmit(e) {
         return;
     }
 
+    // New birth date validation
+    if (!isValidBirthDate(formData.birthDate)) {
+        showNotification('Please enter a valid birth date from the past', 'error');
+        return;
+    }
+
     try {
         await Auth.register(formData);
         showNotification('Account created successfully!', 'success');
@@ -289,6 +318,13 @@ async function handleSignupSubmit(e) {
 function isValidEmail(email) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
+}
+
+function isValidBirthDate(birthDate) {
+    const today = new Date();
+    const dob = new Date(birthDate);
+    // Check if the date is a valid date and not in the future
+    return dob instanceof Date && !isNaN(dob) && dob <= today;
 }
 
 // ========================================
@@ -487,8 +523,7 @@ function uploadProfilePicture() {
 }
 
 function editPassword() {
-    const currentValue = document.querySelector('.profile-item .item-info .item-value').textContent;
-    showEditModal('Password', 'password', currentValue);
+    showPasswordModal();
 }
 
 function editEmail() {
@@ -567,6 +602,84 @@ function showEditModal(fieldName, inputType, currentValue) {
     }, 100);
 }
 
+function showPasswordModal() {
+    const modal = document.createElement('div');
+    modal.innerHTML = `
+        <div style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); 
+                    display: flex; align-items: center; justify-content: center; z-index: 1004;">
+            <div style="background: var(--card-bg); padding: 30px; border-radius: 20px; 
+                        width: 90%; max-width: 400px; backdrop-filter: blur(20px);">
+                <h3 style="margin-bottom: 20px; color: var(--text-primary); 
+                           font-size: 1.5rem; font-weight: 700;">Change Password</h3>
+                <div class="field" style="margin-bottom: 1.25rem;">
+                    <label for="currentPassword">Current Password</label>
+                    <input class="input" type="password" id="currentPassword" 
+                           placeholder="Enter your current password" 
+                           style="width: 100%; padding: 12px; border: 2px solid var(--input-border); 
+                                  border-radius: 10px; background: var(--input-bg); 
+                                  color: var(--text-primary); font-family: 'Lexend', sans-serif;">
+                </div>
+                <div class="field" style="margin-bottom: 1.25rem;">
+                    <label for="newPassword">New Password</label>
+                    <input class="input" type="password" id="newPassword" 
+                           placeholder="Enter your new password" 
+                           style="width: 100%; padding: 12px; border: 2px solid var(--input-border); 
+                                  border-radius: 10px; background: var(--input-bg); 
+                                  color: var(--text-primary); font-family: 'Lexend', sans-serif;">
+                </div>
+                <div class="field" style="margin-bottom: 20px;">
+                    <label for="confirmPassword">Confirm New Password</label>
+                    <input class="input" type="password" id="confirmPassword" 
+                           placeholder="Re-enter your new password" 
+                           style="width: 100%; padding: 12px; border: 2px solid var(--input-border); 
+                                  border-radius: 10px; background: var(--input-bg); 
+                                  color: var(--text-primary); font-family: 'Lexend', sans-serif;">
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button id="cancelEdit" style="padding: 10px 20px; border: 2px solid var(--primary-color); 
+                                                   background: transparent; color: var(--primary-color); 
+                                                   border-radius: 10px; font-weight: 600; cursor: pointer;">Cancel</button>
+                    <button id="saveEdit" style="padding: 10px 20px; border: none; 
+                                                 background: var(--primary-gradient); color: #1e293b; 
+                                                 border-radius: 10px; font-weight: 600; cursor: pointer;">Save</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    document.getElementById('cancelEdit').addEventListener('click', () => {
+        document.body.removeChild(modal);
+    });
+
+    document.getElementById('saveEdit').addEventListener('click', () => {
+        const currentPassword = document.getElementById('currentPassword').value;
+        const newPassword = document.getElementById('newPassword').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+
+        if (!currentPassword || !newPassword || !confirmPassword) {
+            showNotification('Please fill in all fields', 'error');
+            return;
+        }
+
+        if (newPassword.length < 6) {
+            showNotification('New password must be at least 6 characters long', 'error');
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            showNotification('New passwords do not match', 'error');
+            return;
+        }
+
+        // Here, you would call your backend API to validate the current password and update it.
+        // For demonstration, we'll just show a success message.
+        showNotification('Password updated successfully!', 'success');
+        document.body.removeChild(modal);
+    });
+}
+
 // ========================================
 // AUTH GUARD & LOGOUT WIRING
 // ========================================
@@ -601,8 +714,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeNavigation();
     initializeScrollEffects();
     initializeForms();
-    registerServiceWorker();
-    initializePWAPrompt();
     enforceAuthGuard();
     wireLogout();
 

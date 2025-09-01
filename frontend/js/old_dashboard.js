@@ -1,3 +1,5 @@
+
+
 /**
  * Dashboard JavaScript file for EvenUp
  * Handles group creation, modal management, and dynamic UI updates
@@ -23,61 +25,18 @@ document.addEventListener('DOMContentLoaded', () => {
   // Load user's groups on startup
   try { loadUserGroups(); } catch (_) {}
 
-
-  // Add event listeners for expense summary updates
-  setupExpenseSummaryListeners();
-});
-
-/**
- * Sets up event listeners for dynamic expense summary updates
- */
-function setupExpenseSummaryListeners() {
-  // Update expense summary when amount changes
-  const amountInput = document.getElementById('expenseAmount');
-  if (amountInput) {
-    amountInput.addEventListener('input', updateExpenseSummaryFromForm);
-  }
-
-  // Update when split method changes
-  const splitMethodRadios = document.querySelectorAll('input[name="splitMethod"]');
+  // Add event listeners for expense split method and amount changes
+  const splitMethodRadios = document.getElementsByName('splitMethod');
   splitMethodRadios.forEach(radio => {
-    radio.addEventListener('change', () => {
-      handleSplitMethodChange();
-      updateExpenseSummaryFromForm();
-    });
+      radio.addEventListener('change', handleSplitMethodChange);
   });
-
-  // Update when paid by changes
-  const paidBySelect = document.getElementById('expensePaidBy');
-  if (paidBySelect) {
-    paidBySelect.addEventListener('change', updateExpenseSummaryFromForm);
-  }
-
-  // Update when member selection changes
-  const membersContainer = document.getElementById('expenseMembersCheckboxes');
-  if (membersContainer) {
-    membersContainer.addEventListener('change', () => {
-      const method = document.querySelector('input[name="splitMethod"]:checked')?.value || 'equitable';
-      if (method === 'percentage') {
-        updatePercentageInputs();
-      }
-      updateExpenseSummaryFromForm();
-    });
-  }
-}
-
-/**
- * Helper function to update expense summary from current form values
- */
-function updateExpenseSummaryFromForm() {
-  const amount = parseFloat(document.getElementById('expenseAmount')?.value) || 0;
-  const paidById = Number(document.getElementById('expensePaidBy')?.value);
-  const checkboxes = document.querySelectorAll('#expenseMembersCheckboxes input[type="checkbox"]:checked');
-  const selectedIds = Array.from(checkboxes).map(cb => Number(cb.value));
-  const method = document.querySelector('input[name="splitMethod"]:checked')?.value || 'equitable';
   
-  updateExpenseSummary(amount, paidById, selectedIds, method);
-}
+  // Update summary when amount changes
+  const expenseAmountInput = document.getElementById('expenseAmount');
+  if (expenseAmountInput) {
+      expenseAmountInput.addEventListener('input', updateExpenseSummary);
+  }
+});
 
 /**
 * Helper and context 
@@ -140,6 +99,7 @@ const user = {
 };
 
 let currentGroup = null;
+let groupMembers = [];
 
 // ========================================
 // NAVIGATION MANAGEMENT
@@ -257,11 +217,6 @@ try {
   };
   try { localStorage.setItem('active_group_id', String(group.group_id)); } catch (_) {}
   showGroupDetails(group);
-  
-  // Load member balances, debt breakdown and transaction history after showing group details
-  await loadMemberBalances(group.group_id);
-  await loadDebtBreakdown(group.group_id);
-  await loadTransactionHistory(group.group_id);
 } catch (e) {
   showNotification('Failed to load group details', 'error');
 }
@@ -281,12 +236,6 @@ async function addExpense() {
   const checkboxes = document.querySelectorAll('#expenseMembersCheckboxes input[type="checkbox"]:checked');
   const selectedIds = Array.from(checkboxes).map(cb => Number(cb.value));
   if (!selectedIds.length) return showNotification('Select at least one participant.', 'error');
-
-  // CRÍTICO: Asegurar que el pagador esté incluido en participantes
-  if (!selectedIds.includes(paid_by)) {
-    selectedIds.push(paid_by);
-    console.log(`[Frontend] Auto-added payer (${paid_by}) to participants`);
-  }
 
   const method = document.querySelector('input[name="splitMethod"]:checked')?.value || 'equitable';
 
@@ -315,15 +264,11 @@ async function addExpense() {
       showNotification('Expense created successfully!', 'success');
       closeAddExpenseModal();
       await loadAndShowGroupDetails(group_id);
-      await loadMemberBalances(group_id);
-      await loadDebtBreakdown(group_id);
-      await loadTransactionHistory(group_id);
   } catch (err) {
       showNotification(err.message, 'error');
   }
 }
 
-// ...
 
 // ========================================
 // MODAL MANAGEMENT
@@ -441,143 +386,15 @@ function closeAddExpenseModal() {
       modal.classList.remove('is-active');
   }
   document.getElementById('addExpenseForm').reset();
+  const summaryElement = document.getElementById('expenseSummary');
+  if (summaryElement) {
+      summaryElement.style.display = 'none';
+  }
 }
 
-/**
- * Shows the add members modal and populates it with current members.
- */
-function showAddMemberModal() {
-    const modal = document.getElementById('addMemberModal');
-    if (modal) {
-        // Clear previous tags and populate with existing members
-        const memberTagsContainer = document.getElementById('modalMemberTags');
-        memberTagsContainer.innerHTML = '';
-
-        currentGroup.members.forEach(member => {
-            addMemberToTags(member.name, 'modalMemberTags');
-        });
-        
-        // Add event listener for the modal's input
-        const addMemberInput = document.getElementById('addModalMemberInput');
-        if (addMemberInput) {
-            // Remove previous event listener to prevent duplicates
-            const oldHandler = addMemberInput.onkeydown;
-            if (oldHandler) addMemberInput.removeEventListener('keydown', oldHandler);
-            
-            addMemberInput.addEventListener('keydown', (e) => handleAddMember(e, 'modalMemberTags'));
-        }
-
-        modal.classList.add('is-active');
-    }
-}
-
-/**
- * Closes the add member modal.
- */
-function closeAddMemberModal() {
-    const modal = document.getElementById('addMemberModal');
-    if (modal) {
-        modal.classList.remove('is-active');
-    }
-}
-
-/**
- * Handles adding new members to the group after the modal is closed.
- */
-async function addMembersToGroup() {
-    // Get the users from the tags in the modal
-    const modalMemberTags = document.querySelectorAll('#modalMemberTags .tag');
-    const memberNames = Array.from(modalMemberTags).map(tag => tag.textContent.trim().replace(/\s*×\s*$/, ''));
-    
-    const usersToAdd = [];
-    const notFound = [];
-
-    // Filter out users that are already in the group or are the current user
-    const existingMemberIds = currentGroup.members.map(m => m.id);
-    const currentUser = CURRENT_USER_ID();
-    
-    for (const name of memberNames) {
-        // If it's the current user, skip and continue
-        if (name.toLowerCase() === 'you') continue;
-
-        try {
-            const userMatches = await apiFetch(`/users/search?query=${encodeURIComponent(name)}&limit=1`);
-            const user = Array.isArray(userMatches) ? userMatches[0] : null;
-
-            // Check if the user exists and isn't already a member or the current user
-            if (user && user.user_id && !existingMemberIds.includes(user.user_id) && user.user_id !== currentUser) {
-                usersToAdd.push(user);
-                existingMemberIds.push(user.user_id); // Prevent adding duplicates in this session
-            } else if (!user) {
-                notFound.push(name);
-            } else if (user.user_id === currentUser) {
-                // Don't add to notFound, just silently skip current user
-                console.log(`Skipping current user: ${name}`);
-            }
-        } catch (e) {
-            notFound.push(name);
-        }
-    }
-
-    if (notFound.length > 0) {
-        showNotification(`The following members were not found or couldn't be added: ${notFound.join(', ')}`, 'error');
-    }
-    
-    // Check if there are any new members to add to the group
-    if (usersToAdd.length > 0) {
-        try {
-            const memberships = usersToAdd.map(u => ({ group_id: currentGroup.id, user_id: u.user_id }));
-            
-            // Loop through and add each member to the group via the API
-            for (const member of memberships) {
-                await apiFetch('/memberships', { method: 'POST', body: member });
-            }
-
-            // Update the local state with the newly added members
-            const newMembersData = usersToAdd.map(u => ({ id: u.user_id, name: u.username }));
-            currentGroup.members = [...currentGroup.members, ...newMembersData];
-
-            // Update the member count on the details page
-            document.getElementById('groupMembers').textContent = `${currentGroup.members.length} members`;
-            
-            showNotification('Members added successfully!', 'success');
-        } catch (e) {
-            showNotification(`An error occurred while adding members: ${e.message}`, 'error');
-        }
-    }
-    
-    closeAddMemberModal();
-    // After adding members and closing the modal, you should refresh the group details view
-    await loadAndShowGroupDetails(currentGroup.id);
-}
-/**
- * Handles editing the group name.
- * Prompts the user for a new name and updates the UI and backend.
- */
-async function editGroupName() {
-    const newName = prompt("Enter a new name for the group:", currentGroup.name);
-    if (newName && newName.trim() !== "" && newName.trim() !== currentGroup.name) {
-        try {
-            // Update the name in the backend
-            await apiFetch(`/expense_groups/${currentGroup.id || currentGroup.group_id}`, { 
-                method: 'PUT',
-                body: { group_name: newName.trim() } 
-            });
-
-            // Update the local state
-            currentGroup.name = newName.trim();
-            document.getElementById('groupNameTitle').textContent = currentGroup.name;
-            document.getElementById('groupDetailsAvatar').textContent = currentGroup.name.substring(0, 2).toUpperCase();
-            
-            // Re-render the dashboard to reflect the change
-            await loadUserGroups();
-
-            showNotification(`Group name changed to "${currentGroup.name}"`, 'success');
-        } catch (e) {
-            showNotification(`Failed to update group name: ${e.message}`, 'error');
-        }
-    }
-}
+// ========================================
+// DYNAMIC FORM MANAGEMENT
+// ========================================
 
 /**
 * Handles the change event of the group category select dropdown.
@@ -640,75 +457,129 @@ function handleCategoryChange() {
 }
 
 /**
-* Handles the change of the split method for expenses.
-* Shows or hides the percentage inputs based on the selection.
-*/
+ * Updates the expense breakdown based on the current form values
+ */
+function updateExpenseSummary() {
+  const amount = parseFloat(document.getElementById('expenseAmount')?.value) || 0;
+  const method = document.querySelector('input[name="splitMethod"]:checked')?.value || 'equitable';
+  const members = (currentGroup && currentGroup.members) || [];
+  const summaryElement = document.getElementById('expenseSummary');
+  
+  if (!summaryElement) return;
+  
+  if (amount <= 0 || members.length === 0) {
+    summaryElement.style.display = 'none';
+    return;
+  }
+  
+  let summaryHTML = '';
+  let total = 0;
+  let lines = [];
+  
+  if (method === 'percentage') {
+    // Get all percentage inputs
+    const percentageInputs = Array.from(document.querySelectorAll('#percentageInputs input[type="number"]'));
+    const totalPercentage = percentageInputs.reduce((sum, input) => sum + (parseFloat(input.value) || 0), 0);
+    
+    // Validate total percentage
+    if (Math.abs(totalPercentage - 100) > 0.1) {
+      summaryHTML = `
+        <div class="notification is-warning is-light">
+          La suma de los porcentajes es ${totalPercentage}%. Debe sumar exactamente 100%
+        </div>`;
+      summaryElement.innerHTML = summaryHTML;
+      summaryElement.style.display = 'block';
+      return;
+    }
+    
+    // Calculate amounts based on percentages
+    document.querySelectorAll('#percentageInputs .field').forEach((field, index) => {
+      const input = field.querySelector('input[type="number"]');
+      const label = field.querySelector('label').textContent;
+      const percentage = parseFloat(input.value) || 0;
+      const share = (amount * percentage / 100);
+      total += share;
+      
+      lines.push(`
+        <div class="is-flex is-justify-content-space-between" style="padding:4px 0;">
+          <span>${label}</span>
+          <span><strong>$${share.toFixed(2)}</strong> <span class="has-text-grey">(${percentage.toFixed(1)}%)</span></span>
+        </div>`);
+    });
+  } else {
+    // Equitable split
+    const share = amount / members.length;
+    const percentage = (100 / members.length).toFixed(1);
+    total = amount;
+    
+    members.forEach(member => {
+      lines.push(`
+        <div class="is-flex is-justify-content-space-between" style="padding:4px 0;">
+          <span>${member.name}</span>
+          <span><strong>$${share.toFixed(2)}</strong> <span class="has-text-grey">(${percentage}%)</span></span>
+        </div>`);
+    });
+  }
+  
+  // Calculate any rounding differences
+  const remainder = amount - total;
+  
+  // Build the final summary
+  summaryHTML = `
+    <h4 class="title is-6 mb-3">Resumen del Gasto</h4>
+    ${lines.join('')}
+    <hr style="margin:8px 0;">
+    <div class="is-flex is-justify-content-space-between">
+      <span>Total</span>
+      <span><strong>$${amount.toFixed(2)}</strong></span>
+    </div>
+    ${Math.abs(remainder) > 0.01 ? `
+    <p class="has-text-warning" style="margin-top:4px;">
+      Ajuste por redondeo: $${remainder.toFixed(2)}
+    </p>` : ''}
+  `;
+  
+  summaryElement.innerHTML = summaryHTML;
+  summaryElement.style.display = 'block';
+}
+
 function handleSplitMethodChange() {
   const method = document.querySelector('input[name="splitMethod"]:checked')?.value || 'equitable';
   const percentageSection = document.getElementById('percentageSplitSection');
   const percentageInputsDiv = document.getElementById('percentageInputs');
+  const members = (currentGroup && currentGroup.members) || [];
   if (!percentageSection || !percentageInputsDiv) return;
 
   if (method === 'percentage') {
       percentageSection.style.display = 'block';
-      updatePercentageInputs();
+      percentageInputsDiv.innerHTML = '';
+      members.forEach(member => {
+          const inputHTML = `
+              <div class="field is-horizontal">
+                  <div class="field-label is-normal">
+                      <label class="label">${member.name}</label>
+                  </div>
+                  <div class="field-body">
+                      <div class="field has-addons">
+                          <div class="control is-expanded">
+                              <input class="input" type="number" placeholder="%" min="0" max="100">
+                          </div>
+                          <div class="control">
+                              <a class="button is-static">%</a>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          `;
+          percentageInputsDiv.insertAdjacentHTML('beforeend', inputHTML);
+      });
   } else {
       percentageSection.style.display = 'none';
       percentageInputsDiv.innerHTML = '';
   }
-}
-
-/**
- * Updates percentage inputs based on selected members
- */
-function updatePercentageInputs() {
-  const percentageInputsDiv = document.getElementById('percentageInputs');
-  if (!percentageInputsDiv) return;
-
-  // Get selected members
-  const checkboxes = document.querySelectorAll('#expenseMembersCheckboxes input[type="checkbox"]:checked');
-  const selectedIds = Array.from(checkboxes).map(cb => Number(cb.value));
-  const members = (currentGroup && currentGroup.members) || [];
-  const selectedMembers = members.filter(m => selectedIds.includes(m.id) || selectedIds.includes(m.user_id));
-
-  percentageInputsDiv.innerHTML = '';
   
-  if (selectedMembers.length === 0) {
-    percentageInputsDiv.innerHTML = '<p class="has-text-grey">Select members first to set percentages</p>';
-    return;
-  }
-
-  const defaultPercentage = Math.round(100 / selectedMembers.length);
-  
-  selectedMembers.forEach((member, index) => {
-      const isLast = index === selectedMembers.length - 1;
-      const percentage = isLast ? 100 - (defaultPercentage * (selectedMembers.length - 1)) : defaultPercentage;
-      
-      const inputHTML = `
-          <div class="field is-horizontal">
-              <div class="field-label is-normal">
-                  <label class="label">${member.name}</label>
-              </div>
-              <div class="field-body">
-                  <div class="field has-addons">
-                      <div class="control is-expanded">
-                          <input class="input percentage-input" type="number" placeholder="%" min="0" max="100" value="${percentage}">
-                      </div>
-                      <div class="control">
-                          <a class="button is-static">%</a>
-                      </div>
-                  </div>
-              </div>
-          </div>
-      `;
-      percentageInputsDiv.insertAdjacentHTML('beforeend', inputHTML);
-  });
-
-  // Add event listeners to percentage inputs
-  const percentageInputs = percentageInputsDiv.querySelectorAll('.percentage-input');
-  percentageInputs.forEach(input => {
-    input.addEventListener('input', updateExpenseSummaryFromForm);
-  });
+  // Update the expense summary when the split method changes
+  updateExpenseSummary();
 }
 
 
@@ -719,25 +590,13 @@ function updatePercentageInputs() {
 function populatePaidBySelect(members) {
   const paidBySelect = document.getElementById('expensePaidBy');
   if (!paidBySelect) return;
-  paidBySelect.innerHTML = '<option value="">Select who paid...</option>';
-  const currentUserId = CURRENT_USER_ID();
-  
+  paidBySelect.innerHTML = '';
   members.forEach(member => {
       const option = document.createElement('option');
-      const memberId = member.id || member.user_id;
-      option.value = memberId;
-      option.textContent = member.name || member.username || `User ${memberId}`;
-      
-      // Auto-select current user
-      if (memberId === currentUserId) {
-          option.selected = true;
-      }
-      
+      option.value = member.id;
+      option.textContent = member.name;
       paidBySelect.appendChild(option);
   });
-  
-  // Trigger change event to update participants
-  paidBySelect.dispatchEvent(new Event('change'));
 }
 
 /**
@@ -749,19 +608,10 @@ function populateMemberSelects(selectId, members) {
   const select = document.getElementById(selectId);
   if (!select) return;
   select.innerHTML = '';
-  const currentUserId = CURRENT_USER_ID();
-  
   members.forEach(member => {
       const option = document.createElement('option');
-      const memberId = member.id || member.user_id;
-      option.value = memberId;
-      option.textContent = member.name || member.username || `User ${memberId}`;
-      
-      // Auto-select current user for "from" field in payments
-      if (selectId === 'paymentFrom' && memberId === currentUserId) {
-          option.selected = true;
-      }
-      
+      option.value = member.id;
+      option.textContent = member.name;
       select.appendChild(option);
   });
 }
@@ -770,288 +620,14 @@ function populateMembersCheckboxes(members) {
   const container = document.getElementById('expenseMembersCheckboxes');
   if (!container) return;
   container.innerHTML = '';
-  const currentUserId = CURRENT_USER_ID();
-  
   members.forEach(member => {
-      const memberId = member.id || member.user_id;
-      const memberName = member.name || member.username || `User ${memberId}`;
       const label = document.createElement('label');
-      label.className = 'checkbox';
-      
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.value = memberId;
-      
-      // Auto-check current user (payer)
-      if (memberId === currentUserId) {
-          checkbox.checked = true;
-      }
-      
-      // Add event listener to update expense summary
-      checkbox.addEventListener('change', updateExpenseSummaryFromForm);
-      
-      label.appendChild(checkbox);
-      label.appendChild(document.createTextNode(' ' + memberName));
+      label.innerHTML = `
+          <input type="checkbox" value="${member.id}" checked>
+          <span>${member.name}</span>
+      `;
       container.appendChild(label);
   });
-  
-  // Reset expense summary when members are repopulated
-  updateExpenseSummary(0, 0, [], 'equitable');
-}
-
-// ========================================
-// MEMBER BALANCES FUNCTIONS
-// ========================================
-
-async function loadMemberBalances(groupId) {
-  try {
-    const balances = await apiFetch(`/settlements/balances/group/${groupId}`);
-    renderMemberBalances(balances);
-  } catch (error) {
-    console.error('Error loading member balances:', error);
-    document.getElementById('memberBalancesList').innerHTML = 
-      '<div class="balance-item"><span class="has-text-danger">Error loading balances</span></div>';
-  }
-}
-
-function renderMemberBalances(balances) {
-  const container = document.getElementById('memberBalancesList');
-  
-  if (!balances || balances.length === 0) {
-    container.innerHTML = '<div class="balance-item"><span class="has-text-grey">No balances found</span></div>';
-    return;
-  }
-
-  container.innerHTML = balances.map(balance => {
-    const amount = Number(balance.net || 0);
-    const amountClass = amount > 0 ? 'positive' : amount < 0 ? 'negative' : 'zero';
-    const initials = balance.name.split(' ').map(n => n[0]).join('').toUpperCase();
-    
-    return `
-      <div class="balance-item">
-        <div class="balance-user-info">
-          <div class="balance-avatar">${initials}</div>
-          <span class="balance-name">${balance.name}</span>
-        </div>
-        <span class="balance-amount ${amountClass}">$${Math.abs(amount).toFixed(2)}</span>
-      </div>
-    `;
-  }).join('');
-}
-
-async function loadDebtBreakdown(groupId) {
-  try {
-    const balances = await apiFetch(`/settlements/balances/group/${groupId}`);
-    renderDebtBreakdown(balances);
-  } catch (error) {
-    console.error('Error loading debt breakdown:', error);
-    document.getElementById('debtBreakdownList').innerHTML = 
-      '<div class="debt-item"><span class="has-text-danger">Error loading debt breakdown</span></div>';
-  }
-}
-
-function renderDebtBreakdown(balances) {
-  const container = document.getElementById('debtBreakdownList');
-  const currentUserId = CURRENT_USER_ID();
-  
-  if (!balances || balances.length === 0) {
-    container.innerHTML = '<div class="debt-item"><span class="has-text-grey">No debts found</span></div>';
-    return;
-  }
-
-  // Find current user's balance
-  const currentUser = balances.find(b => b.user_id === currentUserId);
-  const currentUserBalance = Number(currentUser?.net || 0);
-  
-  // Create debt relationships
-  const debts = [];
-  
-  balances.forEach(balance => {
-    const amount = Number(balance.net || 0);
-    const userId = balance.user_id;
-    
-    if (userId === currentUserId) return; // Skip self
-    
-    if (currentUserBalance < 0 && amount > 0) {
-      // Current user owes this person
-      const owedAmount = Math.min(Math.abs(currentUserBalance), amount);
-      if (owedAmount > 0.01) {
-        debts.push({
-          type: 'you-owe',
-          description: `You owe ${balance.name}`,
-          amount: owedAmount
-        });
-      }
-    } else if (currentUserBalance > 0 && amount < 0) {
-      // This person owes current user
-      const owedAmount = Math.min(currentUserBalance, Math.abs(amount));
-      if (owedAmount > 0.01) {
-        debts.push({
-          type: 'owes-you',
-          description: `${balance.name} owes you`,
-          amount: owedAmount
-        });
-      }
-    }
-  });
-
-  if (debts.length === 0) {
-    container.innerHTML = '<div class="debt-item"><span class="has-text-grey">All debts settled!</span></div>';
-    return;
-  }
-
-  container.innerHTML = debts.map(debt => `
-    <div class="debt-item ${debt.type}">
-      <div class="debt-description">
-        <span>${debt.description}</span>
-        <span class="debt-arrow">→</span>
-      </div>
-      <span class="debt-amount ${debt.type}">$${debt.amount.toFixed(2)}</span>
-    </div>
-  `).join('');
-}
-
-// ========================================
-// TRANSACTION HISTORY
-// ========================================
-
-let currentTransactionFilter = 'all';
-
-/**
- * Loads and displays transaction history for a group
- */
-async function loadTransactionHistory(groupId) {
-  try {
-    const [expenses, settlements] = await Promise.all([
-      apiFetch(`/expenses/group/${groupId}`).catch(() => []),
-      apiFetch(`/settlements/group/${groupId}`).catch(() => [])
-    ]);
-
-    const transactions = [];
-
-    // Add expenses
-    (expenses || []).forEach(expense => {
-      transactions.push({
-        type: 'expense',
-        id: expense.expense_id,
-        title: expense.expense_name || 'Expense',
-        description: expense.description || '',
-        amount: Number(expense.amount || 0),
-        paidBy: expense.paid_by_name || `User ${expense.paid_by}`,
-        date: new Date(expense.date || expense.created_at),
-        category: expense.category || 'General'
-      });
-    });
-
-    // Add settlements/payments
-    (settlements || []).forEach(settlement => {
-      transactions.push({
-        type: 'payment',
-        id: settlement.settlement_id,
-        title: 'Payment',
-        description: `${settlement.from_user_name || `User ${settlement.from_user}`} → ${settlement.to_user_name || `User ${settlement.to_user}`}`,
-        amount: Number(settlement.amount || 0),
-        paidBy: settlement.from_user_name || `User ${settlement.from_user}`,
-        date: new Date(settlement.created_at),
-        category: 'Payment'
-      });
-    });
-
-    // Sort by date (newest first)
-    transactions.sort((a, b) => b.date - a.date);
-
-    // Store for filtering
-    window.allTransactions = transactions;
-    
-    // Display transactions
-    renderTransactions(transactions);
-    
-  } catch (error) {
-    console.error('Error loading transaction history:', error);
-    document.getElementById('transactionList').innerHTML = `
-      <div class="transaction-item">
-        <i class="fas fa-exclamation-triangle" style="color: #ff6b6b;"></i>
-        <span>Error loading transactions</span>
-      </div>
-    `;
-  }
-}
-
-/**
- * Renders transactions in the UI
- */
-function renderTransactions(transactions) {
-  const container = document.getElementById('transactionList');
-  if (!container) return;
-
-  if (!transactions || transactions.length === 0) {
-    container.innerHTML = `
-      <div class="transaction-item">
-        <i class="fas fa-info-circle" style="color: var(--text-secondary);"></i>
-        <span>No transactions yet</span>
-      </div>
-    `;
-    return;
-  }
-
-  container.innerHTML = transactions.map(transaction => {
-    const isExpense = transaction.type === 'expense';
-    const icon = isExpense ? 'fas fa-shopping-cart' : 'fas fa-exchange-alt';
-    const iconClass = isExpense ? 'expense' : 'payment';
-    
-    const dateStr = transaction.date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-    
-    const timeStr = transaction.date.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
-
-    return `
-      <div class="transaction-item">
-        <div class="transaction-icon ${iconClass}">
-          <i class="${icon}"></i>
-        </div>
-        <div class="transaction-details">
-          <div class="transaction-title">${transaction.title}</div>
-          <div class="transaction-meta">
-            By ${transaction.paidBy} • ${dateStr} at ${timeStr}
-            ${transaction.description ? `<br><small>${transaction.description}</small>` : ''}
-          </div>
-        </div>
-        <div class="transaction-amount">
-          $${transaction.amount.toFixed(2)}
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-/**
- * Shows transactions filtered by type
- */
-function showTransactionTab(filter) {
-  currentTransactionFilter = filter;
-  
-  // Update tab appearance
-  document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-  document.getElementById(`tab${filter.charAt(0).toUpperCase() + filter.slice(1)}`).classList.add('active');
-  
-  // Filter and display transactions
-  const allTransactions = window.allTransactions || [];
-  let filtered = allTransactions;
-  
-  if (filter === 'expenses') {
-    filtered = allTransactions.filter(t => t.type === 'expense');
-  } else if (filter === 'payments') {
-    filtered = allTransactions.filter(t => t.type === 'payment');
-  }
-  
-  renderTransactions(filtered);
 }
 
 // ========================================
@@ -1210,117 +786,6 @@ function renderGroupCard(groupData) {
   window.groups.push(groupData);
 }
 
-/**
- * Updates the expense summary section with the calculated split
- * @param {number} amount - Total expense amount
- * @param {number} paidById - ID of the member who paid
- * @param {Array<number>} selectedIds - Array of selected member IDs
- * @param {string} method - Split method ('equitable' or 'percentage')
- */
-function updateExpenseSummary(amount, paidById, selectedIds, method) {
-  const container = document.getElementById('expenseBreakdown');
-  if (!container) return;
-
-  // If no amount or no selected members, show default message
-  if (!amount || !selectedIds.length) {
-    container.innerHTML = '<p class="has-text-grey">Select members and enter amount to see the split.</p>';
-    return;
-  }
-
-  // Get member info
-  const members = currentGroup?.members || [];
-  const payer = members.find(m => m.id === paidById || m.user_id === paidById);
-  const involvedMembers = members.filter(m => selectedIds.includes(m.id) || selectedIds.includes(m.user_id));
-
-  // Calculate shares
-  let shares = [];
-  let totalPercentage = 0;
-  
-  if (method === 'percentage') {
-    // Get percentage inputs
-    const percentageInputs = Array.from(document.querySelectorAll('#percentageInputs input'));
-    const percentages = [];
-    
-    // Validate percentages
-    percentageInputs.forEach((input, index) => {
-      const pct = parseFloat(input.value) || 0;
-      percentages.push(pct);
-      totalPercentage += pct;
-    });
-
-    // Validate total percentage
-    if (Math.abs(totalPercentage - 100) > 0.1) {
-      container.innerHTML = '<p class="has-text-danger">Total percentage must equal 100%</p>';
-      return;
-    }
-
-    // Calculate shares based on percentages
-    shares = involvedMembers.map((member, index) => {
-      const pct = percentages[index] || 0;
-      const share = (amount * pct) / 100;
-      return { member, share, percentage: pct };
-    });
-  } else {
-    // Equitable split
-    const sharePerPerson = amount / selectedIds.length;
-    shares = involvedMembers.map(member => ({
-      member,
-      share: sharePerPerson,
-      percentage: 100 / selectedIds.length
-    }));
-  }
-
-  // Generate HTML
-  let html = `
-    <div class="mb-3">
-      <p class="has-text-weight-semibold">${payer?.name || 'Someone'} paid: <span class="has-text-primary">$${amount.toFixed(2)}</span></p>
-      <p class="is-size-7 has-text-grey">Split ${method === 'percentage' ? 'by percentage' : 'equally'} among ${selectedIds.length} people</p>
-    </div>
-    <div class="breakdown-list">
-  `;
-
-  // Add each member's share
-  shares.forEach(({ member, share, percentage }) => {
-    const isPayer = member.id === paidById || member.user_id === paidById;
-    const payerBadge = isPayer ? ' <span class="tag is-success is-light is-small">Paid</span>' : '';
-    
-    html += `
-      <div class="is-flex is-justify-content-space-between is-align-items-center py-1">
-        <span>${member.name}${payerBadge}</span>
-        <span>
-          <strong>$${share.toFixed(2)}</strong>
-          <span class="has-text-grey"> (${percentage.toFixed(1)}%)</span>
-        </span>
-      </div>
-    `;
-  });
-
-  // Add total
-  const total = shares.reduce((sum, { share }) => sum + share, 0);
-  const difference = Math.abs(total - amount);
-  
-  html += `
-    </div>
-    <div class="breakdown-total mt-3 pt-2" style="border-top: 1px solid #e5e7eb;">
-      <div class="is-flex is-justify-content-space-between">
-        <span class="has-text-weight-semibold">Total</span>
-        <span class="has-text-weight-semibold">$${total.toFixed(2)}</span>
-      </div>
-  `;
-
-  // Show rounding difference if any
-  if (difference > 0.01) {
-    html += `
-      <div class="is-size-7 has-text-grey">
-        <i>Note: Total adjusted by $${difference.toFixed(2)} due to rounding</i>
-      </div>
-    `;
-  }
-
-  html += `</div>`;
-  container.innerHTML = html;
-}
-
 // ========================================
 // MEMBER MANAGEMENT
 // ========================================
@@ -1346,21 +811,12 @@ function handleAddMember(e) {
 * Adds a new member as a tag in the UI.
 * @param {string} name - The name of the member to add.
 */
-function addMemberToTags(name, containerId = 'memberTags') {
-  const memberTagsContainer = document.getElementById(containerId);
-  const currentUsername = CURRENT_USERNAME();
-  
-  // Prevent adding current user
-  if (currentUsername && name.toLowerCase() === currentUsername.toLowerCase()) {
-    showNotification('You cannot add yourself to the group', 'error');
-    return;
-  }
-  
+function addMemberToTags(name) {
+  const memberTagsContainer = document.getElementById('memberTags');
   // prevent duplicates
-  const existing = Array.from(document.querySelectorAll(`#${containerId} .tag`))
+  const existing = Array.from(document.querySelectorAll('#memberTags .tag'))
     .map(t => t.textContent.trim().replace(/\s*×\s*$/, ''));
   if (existing.some(t => t.toLowerCase() === String(name).toLowerCase())) return;
-  
   const newTagHTML = `
       <span class="tag is-info is-light">
           ${name}
@@ -1390,6 +846,29 @@ function getMembers() {
 // PAYMENT & EXPENSE LOGIC
 // ========================================
 
+/**
+* Handles the submission of the add payment form.
+*/
+function addPaymentLegacy() {
+  const from = document.getElementById('paymentFrom').value;
+  const to = document.getElementById('paymentTo').value;
+  const amount = document.getElementById('paymentAmount').value;
+
+  if (!from || !to || !amount) {
+      showNotification('Please fill in all fields.', 'error');
+      return;
+  }
+
+  if (from === to) {
+      showNotification('Cannot make a payment to yourself.', 'error');
+      return;
+  }
+
+  // Simulate payment logic
+  console.log(`Adding payment: ${from} paid $${amount} to ${to}`);
+  showNotification('Payment added successfully!', 'success');
+  closeAddPaymentModal();
+}
 
 /**
 * Handles the submission of the add expense form.
@@ -1415,9 +894,6 @@ try {
   showNotification('Payment recorded successfully!', 'success');
   closeAddPaymentModal();
   await loadAndShowGroupDetails(group_id);
-  await loadMemberBalances(group_id);
-  await loadDebtBreakdown(group_id);
-  await loadTransactionHistory(group_id);
 } catch (err) {
   showNotification(err.message, 'error');
 }
@@ -1554,7 +1030,6 @@ window.addExpense = addExpense;
 window.addPayment = addPayment;
 window.showDashboard = showDashboard;
 window.toggleTheme = window.toggleTheme || toggleTheme;
-window.showTransactionTab = showTransactionTab;
 } catch (_) {}
 
 // ========================================
@@ -1562,11 +1037,29 @@ window.showTransactionTab = showTransactionTab;
 // ========================================
 
 /**
-* Prepara el modal de gastos con los miembros del grupo actual.
+* Obtiene los miembros del grupo desde el backend y actualiza el estado global.
+* @param {number} groupId - El ID del grupo.
+* @returns {Promise<Array>} - Array de miembros del grupo.
+*/
+async function fetchGroupMembers(groupId) {
+  try {
+      // Ajusta la URL si tu backend usa /api/expenses/group/:groupId/members
+      const members = await apiFetch(`/expenses/group/${groupId}/members`);
+      groupMembers = Array.isArray(members) ? members : [];
+      return groupMembers;
+  } catch (err) {
+      showNotification('No se pudieron cargar los miembros del grupo', 'error');
+      groupMembers = [];
+      return [];
+  }
+}
+
+/**
+* Llama a fetchGroupMembers y actualiza los selects del modal de gastos.
 * @param {number} groupId - El ID del grupo.
 */
 async function prepareAddExpenseModal(groupId) {
-  const members = (currentGroup && currentGroup.members) || [];
+  const members = await fetchGroupMembers(groupId);
   if (members.length < 1) {
       showNotification('No hay miembros en el grupo.', 'error');
       return;
@@ -1574,4 +1067,18 @@ async function prepareAddExpenseModal(groupId) {
   populatePaidBySelect(members);
   populateMembersCheckboxes(members);
   handleSplitMethodChange();
+}
+
+/**
+* Muestra el modal de agregar gasto y prepara los selects con los miembros.
+*/
+async function showAddExpenseModal() {
+  const modal = document.getElementById('addExpenseModal');
+  const groupId = getActiveGroupId();
+  if (!groupId) {
+      showNotification('No hay grupo activo.', 'error');
+      return;
+  }
+  await prepareAddExpenseModal(groupId);
+  if (modal) modal.classList.add('is-active');
 }

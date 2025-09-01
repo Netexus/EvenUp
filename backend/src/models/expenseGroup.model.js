@@ -25,7 +25,7 @@ const ExpenseGroup = {
     return rows[0];
   },
 
-  async getGroupDetails(id) {
+  async getGroupDetails(groupId, userId) {
     const [rows] = await pool.query(
       `SELECT 
         eg.group_id,
@@ -38,11 +38,11 @@ const ExpenseGroup = {
       LEFT JOIN expenses e ON eg.group_id = e.group_id
       LEFT JOIN user_balances ub 
           ON eg.group_id = ub.group_id AND ub.user_id = ?
-      GROUP BY eg.group_id, eg.group_name, ub.net
-      ORDER BY eg.group_name;`,
-      [id]
+      WHERE eg.group_id = ?
+      GROUP BY eg.group_id, eg.group_name, ub.net`,
+      [userId || null, groupId]
     );
-    return rows;
+    return rows[0] || null;
   },
 
   async createTrip(data) {
