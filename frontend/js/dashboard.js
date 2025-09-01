@@ -689,31 +689,87 @@ async function addMembersToGroup() {
     await loadAndShowGroupDetails(currentGroup.id);
 }
 /**
- * Handles editing the group name.
- * Prompts the user for a new name and updates the UI and backend.
+ * Shows the edit group name modal with current name pre-filled.
  */
-async function editGroupName() {
-    const newName = prompt("Enter a new name for the group:", currentGroup.name);
-    if (newName && newName.trim() !== "" && newName.trim() !== currentGroup.name) {
-        try {
-            // Update the name in the backend
-            await apiFetch(`/expense_groups/${currentGroup.id || currentGroup.group_id}`, { 
-                method: 'PUT',
-                body: { group_name: newName.trim() } 
-            });
+function editGroupName() {
+    const modal = document.getElementById('editGroupNameModal');
+    const input = document.getElementById('editGroupNameInput');
+    
+    if (modal && input && currentGroup) {
+        input.value = currentGroup.name;
+        modal.classList.add('is-active');
+        // Focus and select text for easy editing
+        setTimeout(() => {
+            input.focus();
+            input.select();
+        }, 100);
+        
+        // Add Enter key support
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                saveGroupName();
+            }
+        });
+    }
+}
 
-            // Update the local state
-            currentGroup.name = newName.trim();
-            document.getElementById('groupNameTitle').textContent = currentGroup.name;
-            document.getElementById('groupDetailsAvatar').textContent = currentGroup.name.substring(0, 2).toUpperCase();
-            
-            // Re-render the dashboard to reflect the change
-            await loadUserGroups();
+/**
+ * Closes the edit group name modal.
+ */
+function closeEditGroupNameModal() {
+    const modal = document.getElementById('editGroupNameModal');
+    if (modal) {
+        modal.classList.remove('is-active');
+    }
+}
 
-            showNotification(`Group name changed to "${currentGroup.name}"`, 'success');
-        } catch (e) {
-            showNotification(`Failed to update group name: ${e.message}`, 'error');
-        }
+/**
+ * Saves the new group name and updates the UI and backend.
+ */
+async function saveGroupName() {
+    const input = document.getElementById('editGroupNameInput');
+    const newName = input.value.trim();
+    
+    if (!newName) {
+        showNotification('Group name cannot be empty.', 'error');
+        return;
+    }
+    
+    if (newName === currentGroup.name) {
+        closeEditGroupNameModal();
+        return;
+    }
+    
+    try {
+        // Update the name in the backend
+        const groupId = currentGroup.id || currentGroup.group_id;
+        await apiFetch(`/expense_groups/${groupId}`, { 
+            method: 'PUT',
+            body: { 
+                group_name: newName,
+                origin: currentGroup.origin || null,
+                destination: currentGroup.destination || null,
+                departure: currentGroup.departure || null,
+                trip_return: currentGroup.trip_return || null,
+                income_1: currentGroup.income_1 || null,
+                income_2: currentGroup.income_2 || null,
+                category: currentGroup.category || 'other'
+            } 
+        });
+
+        // Update the local state
+        currentGroup.name = newName;
+        document.getElementById('groupNameTitle').textContent = currentGroup.name;
+        document.getElementById('groupDetailsAvatar').textContent = currentGroup.name.substring(0, 2).toUpperCase();
+        
+        // Re-render the dashboard to reflect the change
+        await loadUserGroups();
+
+        closeEditGroupNameModal();
+        showNotification(`Group name changed to "${currentGroup.name}"`, 'success');
+    } catch (e) {
+        showNotification(`Failed to update group name: ${e.message}`, 'error');
     }
 }
 
@@ -1838,6 +1894,9 @@ window.addPayment = addPayment;
 window.showDashboard = showDashboard;
 window.toggleTheme = window.toggleTheme || toggleTheme;
 window.showTransactionTab = showTransactionTab;
+window.editGroupName = editGroupName;
+window.closeEditGroupNameModal = closeEditGroupNameModal;
+window.saveGroupName = saveGroupName;
 } catch (_) {}
 
 // ========================================
