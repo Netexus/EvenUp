@@ -1,4 +1,4 @@
-# EvenUp
+# [EvenUp](https://evenup-s05y.onrender.com/)
 
 EvenUp is a collaborative financial web platform designed to help users **manage shared expenses, settlements, and balances in a fair and transparent way**.  
 The main goal is to provide a simple and modern experience where every user can track contributions and ensure fairness — **to "even up" with others**.  
