@@ -124,7 +124,7 @@ evenup/
 
 1. Clone this repository:  
    ```bash
-   git clone https://github.com/your-username/evenup.git
+   git clone https://github.com/Netexus/EvenUp
    cd EvenUp
    ```
 2. Install backend dependencies:  
@@ -135,12 +135,14 @@ evenup/
 3. Create a `.env` file in the *backend* with the following content: 
 
    ```env
-   DB_HOST=dpg-d2nqbber433s73ahvd5g-a.oregon-postgres.render.com
-   DB_USER=enigma
-   DB_PASSWORD=Qhn2On57WbPSCtBk7Wef25vEV0gew0zA
-   DB_NAME=evenup
-   PORT=5432
-   JWT_SECRET=your-secret-key
+   NODE_ENV=development
+   DB_HOST=your_localhost
+   DB_USER=your_database_name
+   DB_PASSWORD=your_database_password
+   DB_NAME=your_database_name
+   PORT=your_port
+   JWT_SECRET=your_JWT_key
+   PGSSL=false
    ```
 4. Start the server: 
    ```bash
