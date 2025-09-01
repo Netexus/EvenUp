@@ -9,7 +9,8 @@ const ExpenseGroup = {
 
   async getByUser(userId) {
     const [rows] = await pool.query(
-      `SELECT DISTINCT eg.*
+      `SELECT DISTINCT eg.group_id, eg.group_name, eg.created_by, eg.category, eg.status, eg.created_at,
+              eg.origin, eg.destination, eg.departure, eg.trip_return, eg.income_1, eg.income_2
        FROM expense_groups eg
        LEFT JOIN group_memberships gm
          ON gm.group_id = eg.group_id
@@ -30,6 +31,13 @@ const ExpenseGroup = {
       `SELECT 
         eg.group_id,
         eg.group_name,
+        eg.category,
+        eg.origin,
+        eg.destination,
+        eg.departure,
+        eg.trip_return,
+        eg.income_1,
+        eg.income_2,
         COUNT(DISTINCT gm.user_id) AS num_members,
         COALESCE(SUM(e.amount), 0) AS total_spent,
         COALESCE(ub.net, 0) AS user_balance
@@ -39,7 +47,7 @@ const ExpenseGroup = {
       LEFT JOIN user_balances ub 
           ON eg.group_id = ub.group_id AND ub.user_id = ?
       WHERE eg.group_id = ?
-      GROUP BY eg.group_id, eg.group_name, ub.net`,
+      GROUP BY eg.group_id, eg.group_name, eg.category, eg.origin, eg.destination, eg.departure, eg.trip_return, eg.income_1, eg.income_2, ub.net`,
       [userId || null, groupId]
     );
     return rows[0] || null;
