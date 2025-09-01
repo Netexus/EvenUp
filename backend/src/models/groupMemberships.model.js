@@ -3,6 +3,16 @@ const pool = require('../config/database');
 const GroupMembershipsModel = {
   // CREATE
   create: async (group_id, user_id, role = 'member') => {
+    // Verifica si ya existe la membresía antes de insertar
+    const existsQuery = `
+      SELECT 1 FROM group_memberships WHERE group_id = ? AND user_id = ?
+    `;
+    const [exists] = await pool.query(existsQuery, [group_id, user_id]);
+    if (exists.length > 0) {
+      // Ya existe, no agregar de nuevo
+      return null;
+    }
+
     const query = `
       INSERT INTO group_memberships (group_id, user_id, role)
       VALUES (?, ?, ?)

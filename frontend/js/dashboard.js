@@ -320,7 +320,12 @@ async function addExpense() {
 function showCreateGroupModal() {
   const modal = document.getElementById('createGroupModal');
   if (modal) {
-      modal.classList.add('is-active');
+    modal.classList.add('is-active');
+    // Asegura que "You" esté como primer tag
+    const memberTags = document.getElementById('memberTags');
+    if (memberTags && !Array.from(memberTags.children).some(tag => tag.textContent.trim().toLowerCase() === 'you')) {
+        addMemberToTags('You');
+    }
   }
 }
 
@@ -339,40 +344,43 @@ function closeCreateGroupModal() {
 * Resets the create group modal form and member tags to initial state.
 */
 function resetCreateGroupForm() {
-// Text inputs
-const nameInput = document.getElementById('groupName');
-if (nameInput) nameInput.value = '';
+  // Text inputs
+  const nameInput = document.getElementById('groupName');
+  if (nameInput) nameInput.value = '';
 
-// Category back to 'other' and refresh dynamic fields
-const catSel = document.getElementById('groupCategory');
-if (catSel) {
-  catSel.value = 'other';
-  handleCategoryChange();
-}
+  // Category back to 'other' and refresh dynamic fields
+  const catSel = document.getElementById('groupCategory');
+  if (catSel) {
+    catSel.value = 'other';
+    handleCategoryChange();
+  }
 
-// Clear dynamic specific inputs if present
-const relName = document.getElementById('relationshipName');
-if (relName) relName.value = '';
-const yourIncome = document.getElementById('yourIncome');
-if (yourIncome) yourIncome.value = '';
-const partnerIncome = document.getElementById('partnerIncome');
-if (partnerIncome) partnerIncome.value = '';
+  // Clear dynamic specific inputs if present
+  const relName = document.getElementById('relationshipName');
+  if (relName) relName.value = '';
+  const yourIncome = document.getElementById('yourIncome');
+  if (yourIncome) yourIncome.value = '';
+  const partnerIncome = document.getElementById('partnerIncome');
+  if (partnerIncome) partnerIncome.value = '';
 
-const tripDestination = document.getElementById('tripDestination');
-if (tripDestination) tripDestination.value = '';
-const tripStartPoint = document.getElementById('tripStartPoint');
-if (tripStartPoint) tripStartPoint.value = '';
-const tripDepartureDate = document.getElementById('tripDepartureDate');
-if (tripDepartureDate) tripDepartureDate.value = '';
-const tripArrivalDate = document.getElementById('tripArrivalDate');
-if (tripArrivalDate) tripArrivalDate.value = '';
+  const tripDestination = document.getElementById('tripDestination');
+  if (tripDestination) tripDestination.value = '';
+  const tripStartPoint = document.getElementById('tripStartPoint');
+  if (tripStartPoint) tripStartPoint.value = '';
+  const tripDepartureDate = document.getElementById('tripDepartureDate');
+  if (tripDepartureDate) tripDepartureDate.value = '';
+  const tripArrivalDate = document.getElementById('tripArrivalDate');
+  if (tripArrivalDate) tripArrivalDate.value = '';
 
-// Clear member tags and input
-const memberTags = document.getElementById('memberTags');
-if (memberTags) memberTags.innerHTML = '';
-const addMemberInput = document.getElementById('addMemberInput');
-if (addMemberInput) addMemberInput.value = '';
-clearMemberSuggestions();
+  // Clear member tags and input
+  const memberTags = document.getElementById('memberTags');
+  if (memberTags) {
+    memberTags.innerHTML = '';
+    addMemberToTags('You');
+  }
+  const addMemberInput = document.getElementById('addMemberInput');
+  if (addMemberInput) addMemberInput.value = '';
+  clearMemberSuggestions();
 }
 
 /**
@@ -771,6 +779,7 @@ const inputMembers = (members || [])
   .map(m => String(m).trim())
   .filter(Boolean);
 
+// Bloquea el username actual
 const resolvedUsers = [];
 const notFound = [];
 for (const uname of inputMembers) {
@@ -1041,10 +1050,18 @@ function handleAddMember(e) {
 */
 function addMemberToTags(name) {
   const memberTagsContainer = document.getElementById('memberTags');
-  // prevent duplicates
   const existing = Array.from(document.querySelectorAll('#memberTags .tag'))
     .map(t => t.textContent.trim().replace(/\s*×\s*$/, ''));
+
+  // Obtén el username actual y compara
+  const currentUsername = CURRENT_USERNAME().toLowerCase();
+  const isYou = String(name).toLowerCase() === 'you' || String(name).toLowerCase() === currentUsername;
+
+  // No permitir agregar el usuario actual
+  if (isYou) return;
+
   if (existing.some(t => t.toLowerCase() === String(name).toLowerCase())) return;
+
   const newTagHTML = `
       <span class="tag is-info is-light">
           ${name}
@@ -1060,13 +1077,15 @@ function addMemberToTags(name) {
 */
 function getMembers() {
   const memberTags = document.querySelectorAll('#memberTags .tag');
-  const members = ['You'];
+  const members = [];
   memberTags.forEach(tag => {
-      const text = tag.textContent.trim();
-      if (text && text !== 'You') { 
+      const text = tag.textContent.trim().replace(/\s*×\s*$/, '');
+      if (text) { 
           members.push(text);
       }
   });
+  // Si "You" no está, lo agrega
+  if (!members.some(m => m.toLowerCase() === 'you')) members.unshift('You');
   return members;
 }
 
@@ -1150,26 +1169,28 @@ return el;
 }
 
 function renderMemberSuggestions(list, q) {
-const el = ensureSuggestionContainer();
-if (!list.length) { el.innerHTML = ''; el.style.display = 'none'; return; }
-const esc = (s) => String(s || '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-el.innerHTML = list.map(u => `
-  <div class="suggest-item" data-username="${esc(u.username)}" style="padding:8px 12px; cursor:pointer;">
-    <div style="font-weight:600;">${esc(u.username)}</div>
-    <div style="font-size:12px; color:#666;">${esc(u.email || '')} ${u.name ? '• ' + esc(u.name) : ''}</div>
-  </div>
-`).join('');
-el.style.display = 'block';
-Array.from(el.querySelectorAll('.suggest-item')).forEach(item => {
-  item.addEventListener('mousedown', (ev) => {
-    ev.preventDefault();
-    const uname = item.getAttribute('data-username');
-    if (uname) addMemberToTags(uname);
-    const input = document.getElementById('addMemberInput');
-    if (input) input.value = '';
-    clearMemberSuggestions();
+  const el = ensureSuggestionContainer();
+  const currentUsername = CURRENT_USERNAME().toLowerCase();
+  const filteredList = list.filter(u => (u.username || '').toLowerCase() !== currentUsername);
+  if (!filteredList.length) { el.innerHTML = ''; el.style.display = 'none'; return; }
+  const esc = (s) => String(s || '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  el.innerHTML = filteredList.map(u => `
+    <div class="suggest-item" data-username="${esc(u.username)}" style="padding:8px 12px; cursor:pointer;">
+      <div style="font-weight:600;">${esc(u.username)}</div>
+      <div style="font-size:12px; color:#666;">${esc(u.email || '')} ${u.name ? '• ' + esc(u.name) : ''}</div>
+    </div>
+  `).join('');
+  el.style.display = 'block';
+  Array.from(el.querySelectorAll('.suggest-item')).forEach(item => {
+    item.addEventListener('mousedown', (ev) => {
+      ev.preventDefault();
+      const uname = item.getAttribute('data-username');
+      if (uname) addMemberToTags(uname);
+      const input = document.getElementById('addMemberInput');
+      if (input) input.value = '';
+      clearMemberSuggestions();
+    });
   });
-});
 }
 
 function clearMemberSuggestions() {
@@ -1257,7 +1278,7 @@ async function fetchGroupMembers(groupId) {
         return [];
     }
 }
-
+/**
 * Prepara el modal de gastos con los miembros del grupo actual.
 * @param {number} groupId - El ID del grupo.
 */
@@ -1272,7 +1293,9 @@ async function prepareAddExpenseModal(groupId) {
   handleSplitMethodChange();
 }
 
-// Muestra el modal y prepara los selects
+/**
+ * Muestra el modal de agregar gasto y prepara los selects con los miembros.
+ */
 async function showAddExpenseModal() {
     const modal = document.getElementById('addExpenseModal');
     const groupId = getActiveGroupId();
