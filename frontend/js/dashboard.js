@@ -416,11 +416,8 @@ async function addExpense() {
     selectedIds = Array.from(checkboxes).map(cb => Number(cb.value));
     if (!selectedIds.length) return showNotification('Select at least one participant.', 'error');
 
-    // CRÍTICO: Asegurar que el pagador esté incluido en participantes
-    if (!selectedIds.includes(paid_by)) {
-      selectedIds.push(paid_by);
-      console.log(`[Frontend] Auto-added payer (${paid_by}) to participants`);
-    }
+    // Note: Participants can be a subset of group members - this is intentional
+    // The payer doesn't need to be included in participants if they didn't benefit from the expense
 
     const method = document.querySelector('input[name="splitMethod"]:checked')?.value || 'equitable';
 
@@ -777,16 +774,18 @@ function handleCategoryChange() {
                   </div>
               </div>
               <div class="field">
-                  <label class="label">Departure Date</label>
+                  <label class="label">Start Date</label>
                   <div class="control">
                       <input class="input" type="date" id="tripDepartureDate" required>
                   </div>
+                  <p class="help">When does the trip begin?</p>
               </div>
               <div class="field">
-                  <label class="label">Arrival Date</label>
+                  <label class="label">End Date</label>
                   <div class="control">
                       <input class="input" type="date" id="tripArrivalDate" required>
                   </div>
+                  <p class="help">When does the trip end?</p>
               </div>
           `;
       }
