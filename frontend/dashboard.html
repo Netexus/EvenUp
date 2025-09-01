@@ -408,6 +408,30 @@
         </div>
     </div>
 
+    <!-- Edit Group Name Modal -->
+    <div class="modal" id="editGroupNameModal">
+        <div class="modal-background" onclick="closeEditGroupNameModal()"></div>
+        <div class="modal-card">
+            <header class="modal-card-head">
+                <p class="modal-card-title">Edit Group Name</p>
+                <button class="delete" onclick="closeEditGroupNameModal()"></button>
+            </header>
+            <section class="modal-card-body">
+                <div class="field">
+                    <label class="label">Group Name</label>
+                    <div class="control">
+                        <input class="input" type="text" id="editGroupNameInput" placeholder="Enter new group name" maxlength="100">
+                    </div>
+                    <p class="help">Choose a descriptive name for your group</p>
+                </div>
+            </section>
+            <footer class="modal-card-foot">
+                <button class="button is-primary" onclick="saveGroupName()">Save Changes</button>
+                <button class="button" onclick="closeEditGroupNameModal()">Cancel</button>
+            </footer>
+        </div>
+    </div>
+
     <script src="./js/config.js"></script>
     <script src="./js/pwa.js"></script>
     <script src="./js/auth.js"></script>
