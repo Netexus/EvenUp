@@ -159,7 +159,6 @@ function showGroupDetails(group) {
     localStorage.setItem('active_group_id', String(group.group_id || group.id || ''));
   } catch (_) {}
   
-  // Populate group details
   const gname = group.name || group.group_name || '';
   document.getElementById('groupNameTitle').textContent = gname;
   document.getElementById('groupDetailsAvatar').textContent = gname.substring(0, 2).toUpperCase();
@@ -167,6 +166,37 @@ function showGroupDetails(group) {
   document.getElementById('totalExpenses').textContent = `$${Number(group.totalExpenses||0).toFixed(2)}`;
   document.getElementById('youOwe').textContent = `$${Number(group.youOwe||0).toFixed(2)}`;
   document.getElementById('youAreOwed').textContent = `$${Number(group.youAreOwed||0).toFixed(2)}`;
+  
+  // Show group type badge
+  updateGroupTypeBadge(group.category || 'other');
+}
+
+/**
+ * Updates the group type badge display
+ * @param {string} category - Group category (relationship, trip, other)
+ */
+function updateGroupTypeBadge(category) {
+  const badge = document.getElementById('groupTypeBadge');
+  if (!badge) return;
+  
+  // Clear existing classes
+  badge.className = 'group-type-badge';
+  
+  if (category === 'relationship') {
+    badge.classList.add('relationship');
+    badge.innerHTML = '<i class="fas fa-heart"></i> Relationship';
+    badge.style.display = 'inline-flex';
+  } else if (category === 'trip') {
+    badge.classList.add('trip');
+    badge.innerHTML = '<i class="fas fa-plane"></i> Trip';
+    badge.style.display = 'inline-flex';
+  } else if (category === 'other') {
+    badge.classList.add('other');
+    badge.innerHTML = '<i class="fas fa-users"></i> Group';
+    badge.style.display = 'inline-flex';
+  } else {
+    badge.style.display = 'none';
+  }
 }
 
 /**
@@ -193,7 +223,7 @@ try {
 }
 }
 
-function renderGroupsGrid(groups) {
+async function renderGroupsGrid(groups) {
 const grid = document.getElementById('groupsGrid');
 if (!grid) return;
 // Preserve the add-group card
@@ -201,22 +231,77 @@ const addCard = grid.querySelector('.add-group-card');
 grid.innerHTML = '';
 if (addCard) grid.appendChild(addCard);
 
-(groups || []).forEach(g => {
+for (const g of (groups || [])) {
   const card = document.createElement('div');
   card.className = 'group-card';
   const name = g.group_name || g.name || `Group ${g.group_id}`;
+  const groupId = g.group_id || g.id;
+  
+  // Get group details for stats
+  let memberCount = 0;
+  let totalExpenses = 0;
+  let userBalance = 0;
+  let category = g.category || 'other';
+  
+  try {
+    // Get member count
+    const memberships = await apiFetch(`/memberships/group/${groupId}`);
+    memberCount = (memberships || []).length;
+    
+    // Get expenses total
+    const expenses = await apiFetch(`/expenses/group/${groupId}`);
+    totalExpenses = (expenses || []).reduce((sum, e) => sum + Number(e.amount || 0), 0);
+    
+    // Get user balance
+    const balances = await apiFetch(`/settlements/balances/group/${groupId}`);
+    const userBalanceData = (balances || []).find(b => b.user_id === CURRENT_USER_ID());
+    userBalance = Number(userBalanceData?.net || 0);
+  } catch (e) {
+    console.warn(`Failed to load stats for group ${groupId}:`, e);
+  }
+  
+  // Determine badge for group type
+  let typeBadge = '';
+  if (category === 'relationship') {
+    typeBadge = '<span class="group-type-badge relationship"><i class="fas fa-heart"></i></span>';
+  } else if (category === 'trip') {
+    typeBadge = '<span class="group-type-badge trip"><i class="fas fa-plane"></i></span>';
+  } else {
+    typeBadge = '<span class="group-type-badge other"><i class="fas fa-users"></i></span>';
+  }
+  
+  // Determine balance display
+  const balanceClass = userBalance > 0 ? 'positive' : userBalance < 0 ? 'negative' : 'zero';
+  const balanceAmount = userBalance === 0 ? '$0.00' : `$${Math.abs(userBalance).toFixed(2)}`;
+  const balanceLabel = userBalance > 0 ? 'You\'re Owed' : 
+                      userBalance < 0 ? 'You Owe' : 
+                      'Your Balance';
+  
   card.innerHTML = `
     <div class="group-header">
       <div class="group-avatar">${String(name).substring(0,2).toUpperCase()}</div>
       <div class="group-info">
-        <h3>${name}</h3>
-        <p></p>
+        <div class="group-title-row">
+          <h3>${name}</h3>
+          ${typeBadge}
+        </div>
+        <p>${memberCount} member${memberCount !== 1 ? 's' : ''}</p>
+      </div>
+    </div>
+    <div class="group-stats">
+      <div class="stat-item">
+        <span class="stat-value">$${totalExpenses.toFixed(2)}</span>
+        <span class="stat-label">Total Expenses</span>
+      </div>
+      <div class="stat-item balance-stat">
+        <span class="stat-value ${balanceClass}">${balanceAmount}</span>
+        <span class="stat-label">${balanceLabel}</span>
       </div>
     </div>
   `;
-  card.onclick = () => loadAndShowGroupDetails(g.group_id || g.id);
+  card.onclick = () => loadAndShowGroupDetails(groupId);
   grid.insertBefore(card, grid.querySelector('.add-group-card'));
-});
+}
 }
 // Load group data from backend and navigate to details
 async function loadAndShowGroupDetails(groupId) {
@@ -236,20 +321,23 @@ try {
   let totalExpenses = 0;
   try {
     const expenses = await apiFetch(`/expenses/group/${groupId}`);
-    totalExpenses = (Array.isArray(expenses) ? expenses : []).reduce((sum, e) => sum + Number(e.amount || 0), 0);
+    totalExpenses = (expenses || []).reduce((sum, e) => sum + Number(e.amount || 0), 0);
   } catch (_) {}
 
+  const currentUserId = CURRENT_USER_ID();
   let youOwe = 0, youAreOwed = 0;
   try {
-    const bal = await apiFetch(`/settlements/balance/group/${groupId}/user/${CURRENT_USER_ID()}`);
-    const val = Number(bal?.net ?? bal?.balance ?? bal?.amount ?? 0);
-    if (val >= 0) { youAreOwed = val; } else { youOwe = Math.abs(val); }
+    const balances = await apiFetch(`/settlements/balances/group/${groupId}`);
+    const userBalance = (balances || []).find(b => Number(b.user_id) === currentUserId);
+    const net = Number(userBalance?.net || 0);
+    if (net < 0) youOwe = Math.abs(net);
+    else youAreOwed = net;
   } catch (_) {}
 
   const group = {
-    id: groupInfo.group_id || groupId,
     group_id: groupInfo.group_id || groupId,
     name: groupInfo.group_name || groupInfo.name || '',
+    category: groupInfo.category || 'other',
     members,
     totalExpenses,
     youOwe,
@@ -277,37 +365,79 @@ async function addExpense() {
   const amount = parseFloat(document.getElementById('expenseAmount')?.value);
   const paid_by = Number(document.getElementById('expensePaidBy')?.value);
 
-  // Obtén los participantes seleccionados
-  const checkboxes = document.querySelectorAll('#expenseMembersCheckboxes input[type="checkbox"]:checked');
-  const selectedIds = Array.from(checkboxes).map(cb => Number(cb.value));
-  if (!selectedIds.length) return showNotification('Select at least one participant.', 'error');
-
-  // CRÍTICO: Asegurar que el pagador esté incluido en participantes
-  if (!selectedIds.includes(paid_by)) {
-    selectedIds.push(paid_by);
-    console.log(`[Frontend] Auto-added payer (${paid_by}) to participants`);
+  // Check if this is a relationship group
+  let isRelationshipGroup = false;
+  try {
+    const groupInfo = await apiFetch(`/expense_groups/${group_id}`);
+    const group = Array.isArray(groupInfo) ? groupInfo[0] : groupInfo;
+    isRelationshipGroup = group?.category === 'relationship';
+  } catch (e) {
+    console.warn('Could not fetch group info:', e);
   }
 
-  const method = document.querySelector('input[name="splitMethod"]:checked')?.value || 'equitable';
-
   let participants = [];
-  if (method === 'equitable') {
+  let selectedIds = [];
+
+  if (isRelationshipGroup) {
+    // For relationship groups, automatically include all members with income-based percentages
+    const members = (currentGroup && currentGroup.members) || [];
+    selectedIds = members.map(m => m.id || m.user_id);
+    
+    // Get income data for percentage calculation
+    try {
+      const groupInfo = await apiFetch(`/expense_groups/${group_id}`);
+      const group = Array.isArray(groupInfo) ? groupInfo[0] : groupInfo;
+      
+      if (group && group.income_1 && group.income_2) {
+        const totalIncome = Number(group.income_1) + Number(group.income_2);
+        const income1Percentage = Number(group.income_1) / totalIncome;
+        const income2Percentage = Number(group.income_2) / totalIncome;
+        
+        // Assign percentages to members (creator gets income_1, other gets income_2)
+        const creatorId = CURRENT_USER_ID();
+        participants = selectedIds.map(uid => {
+          const percentage = uid === creatorId ? income1Percentage : income2Percentage;
+          const share = Math.round((amount * percentage) * 100) / 100;
+          return { user_id: uid, share_amount: share };
+        });
+      } else {
+        // Fallback to equal split if income data is missing
+        const per = Math.round((amount / selectedIds.length) * 100) / 100;
+        participants = selectedIds.map(uid => ({ user_id: uid, share_amount: per }));
+      }
+    } catch (e) {
+      console.warn('Could not fetch income data, using equal split:', e);
       const per = Math.round((amount / selectedIds.length) * 100) / 100;
       participants = selectedIds.map(uid => ({ user_id: uid, share_amount: per }));
+    }
   } else {
-      const inputs = Array.from(document.querySelectorAll('#percentageInputs input'));
-      const membersOrder = selectedIds;
-      const selectedPercents = selectedIds.map((uid, idx) => {
-          const val = parseFloat(inputs[idx]?.value || '0');
-          return isNaN(val) ? 0 : val;
-      });
-      const sumPct = selectedPercents.reduce((a,b)=>a+b,0);
-      if (Math.round(sumPct) !== 100) return showNotification('Percentages must sum to 100% for selected members', 'error');
-      participants = selectedIds.map((uid, idx) => {
-          const pct = parseFloat(inputs[idx]?.value || '0');
-          const share = Math.round((amount * ((isNaN(pct)?0:pct)/100)) * 100) / 100;
-          return { user_id: uid, share_amount: share };
-      });
+    // Original logic for non-relationship groups
+    const checkboxes = document.querySelectorAll('#expenseMembersCheckboxes input[type="checkbox"]:checked');
+    selectedIds = Array.from(checkboxes).map(cb => Number(cb.value));
+    if (!selectedIds.length) return showNotification('Select at least one participant.', 'error');
+
+    // Note: Participants can be a subset of group members - this is intentional
+    // The payer doesn't need to be included in participants if they didn't benefit from the expense
+
+    const method = document.querySelector('input[name="splitMethod"]:checked')?.value || 'equitable';
+
+    if (method === 'equitable') {
+        const per = Math.round((amount / selectedIds.length) * 100) / 100;
+        participants = selectedIds.map(uid => ({ user_id: uid, share_amount: per }));
+    } else {
+        const inputs = Array.from(document.querySelectorAll('#percentageInputs input'));
+        const selectedPercents = selectedIds.map((uid, idx) => {
+            const val = parseFloat(inputs[idx]?.value || '0');
+            return isNaN(val) ? 0 : val;
+        });
+        const sumPct = selectedPercents.reduce((a,b)=>a+b,0);
+        if (Math.round(sumPct) !== 100) return showNotification('Percentages must sum to 100% for selected members', 'error');
+        participants = selectedIds.map((uid, idx) => {
+            const pct = parseFloat(inputs[idx]?.value || '0');
+            const share = Math.round((amount * ((isNaN(pct)?0:pct)/100)) * 100) / 100;
+            return { user_id: uid, share_amount: share };
+        });
+    }
   }
 
   try {
@@ -594,9 +724,20 @@ async function editGroupName() {
 function handleCategoryChange() {
   const category = document.getElementById('groupCategory').value;
   const dynamicFormSection = document.getElementById('dynamicFormSection');
+  const relationshipInfo = document.getElementById('relationshipMemberInfo');
+  const memberHelp = document.getElementById('memberHelp');
+  const addMemberInput = document.getElementById('addMemberInput');
+  
   dynamicFormSection.innerHTML = ''; // Clear previous content
 
+  // Show/hide relationship-specific UI elements
   if (category === 'relationship') {
+      // Show relationship info notification
+      if (relationshipInfo) relationshipInfo.style.display = 'block';
+      // Update help text and placeholder
+      if (memberHelp) memberHelp.textContent = 'Add exactly 1 partner for relationship groups';
+      if (addMemberInput) addMemberInput.placeholder = 'Enter your partner\'s email or username';
+      
       dynamicFormSection.innerHTML = `
           <div class="field">
               <label class="label">Relationship Name</label>
@@ -609,41 +750,53 @@ function handleCategoryChange() {
               <div class="control">
                   <input class="input" type="number" id="yourIncome" placeholder="e.g., 50000" min="0">
               </div>
+              <p class="help">Used to calculate expense split percentages</p>
           </div>
           <div class="field">
               <label class="label">Partner's Income ($)</label>
               <div class="control">
                   <input class="input" type="number" id="partnerIncome" placeholder="e.g., 60000" min="0">
               </div>
+              <p class="help">Used to calculate expense split percentages</p>
           </div>
       `;
-  } else if (category === 'trip') {
-      dynamicFormSection.innerHTML = `
-          <div class="field">
-              <label class="label">Destination</label>
-              <div class="control">
-                  <input class="input" type="text" id="tripDestination" placeholder="e.g., Paris" required>
+  } else {
+      // Hide relationship info notification
+      if (relationshipInfo) relationshipInfo.style.display = 'none';
+      // Reset help text and placeholder
+      if (memberHelp) memberHelp.textContent = 'Press Enter to add a member';
+      if (addMemberInput) addMemberInput.placeholder = 'Enter member email or username';
+      
+      if (category === 'trip') {
+          dynamicFormSection.innerHTML = `
+              <div class="field">
+                  <label class="label">Destination</label>
+                  <div class="control">
+                      <input class="input" type="text" id="tripDestination" placeholder="e.g., Paris" required>
+                  </div>
               </div>
-          </div>
-          <div class="field">
-              <label class="label">Starting Point</label>
-              <div class="control">
-                  <input class="input" type="text" id="tripStartPoint" placeholder="e.g., Home" required>
+              <div class="field">
+                  <label class="label">Starting Point</label>
+                  <div class="control">
+                      <input class="input" type="text" id="tripStartPoint" placeholder="e.g., Home" required>
+                  </div>
               </div>
-          </div>
-          <div class="field">
-              <label class="label">Departure Date</label>
-              <div class="control">
-                  <input class="input" type="date" id="tripDepartureDate" required>
+              <div class="field">
+                  <label class="label">Start Date</label>
+                  <div class="control">
+                      <input class="input" type="date" id="tripDepartureDate" required>
+                  </div>
+                  <p class="help">When does the trip begin?</p>
               </div>
-          </div>
-          <div class="field">
-              <label class="label">Arrival Date</label>
-              <div class="control">
-                  <input class="input" type="date" id="tripArrivalDate" required>
+              <div class="field">
+                  <label class="label">End Date</label>
+                  <div class="control">
+                      <input class="input" type="date" id="tripArrivalDate" required>
+                  </div>
+                  <p class="help">When does the trip end?</p>
               </div>
-          </div>
-      `;
+          `;
+      }
   }
 }
 
@@ -774,7 +927,7 @@ function populateMemberSelects(selectId, members) {
   });
 }
 
-function populateMembersCheckboxes(members) {
+function populateMembersCheckboxes(members, autoSelectAll = false) {
   const container = document.getElementById('expenseMembersCheckboxes');
   if (!container) return;
   container.innerHTML = '';
@@ -790,8 +943,8 @@ function populateMembersCheckboxes(members) {
       checkbox.type = 'checkbox';
       checkbox.value = memberId;
       
-      // Auto-check current user (payer)
-      if (memberId === currentUserId) {
+      // Auto-check current user (payer) or all members for relationship groups
+      if (autoSelectAll || memberId === currentUserId) {
           checkbox.checked = true;
       }
       
@@ -805,6 +958,84 @@ function populateMembersCheckboxes(members) {
   
   // Reset expense summary when members are repopulated
   updateExpenseSummary(0, 0, [], 'equitable');
+}
+
+/**
+ * Hides specific sections of the expense form
+ * @param {Array<string>} sectionIds - Array of section IDs to hide
+ */
+function hideExpenseFormSections(sectionIds) {
+  sectionIds.forEach(sectionId => {
+    if (sectionId === 'expenseMembersCheckboxes') {
+      const field = document.getElementById('expenseMembersField');
+      if (field) field.style.display = 'none';
+    } else if (sectionId === 'splitMethod') {
+      const field = document.getElementById('splitMethodField');
+      if (field) field.style.display = 'none';
+      const percentageSection = document.getElementById('percentageSplitSection');
+      if (percentageSection) percentageSection.style.display = 'none';
+    }
+  });
+  
+  // Show relationship expense info
+  const relationshipInfo = document.getElementById('relationshipExpenseInfo');
+  if (relationshipInfo) relationshipInfo.style.display = 'block';
+}
+
+/**
+ * Shows specific sections of the expense form
+ * @param {Array<string>} sectionIds - Array of section IDs to show
+ */
+function showExpenseFormSections(sectionIds) {
+  sectionIds.forEach(sectionId => {
+    if (sectionId === 'expenseMembersCheckboxes') {
+      const field = document.getElementById('expenseMembersField');
+      if (field) field.style.display = 'block';
+    } else if (sectionId === 'splitMethod') {
+      const field = document.getElementById('splitMethodField');
+      if (field) field.style.display = 'block';
+    }
+  });
+  
+  // Hide relationship expense info
+  const relationshipInfo = document.getElementById('relationshipExpenseInfo');
+  if (relationshipInfo) relationshipInfo.style.display = 'none';
+}
+
+/**
+ * Sets up automatic percentage split for relationship groups based on income
+ */
+async function setRelationshipSplitMethod() {
+  // Force percentage method selection
+  const percentageRadio = document.querySelector('input[name="splitMethod"][value="percentage"]');
+  if (percentageRadio) {
+    percentageRadio.checked = true;
+  }
+  
+  // Get group info with income data
+  const groupId = getActiveGroupId();
+  try {
+    const groupInfo = await apiFetch(`/expense_groups/${groupId}`);
+    const group = Array.isArray(groupInfo) ? groupInfo[0] : groupInfo;
+    
+    if (group && group.income_1 && group.income_2) {
+      const totalIncome = Number(group.income_1) + Number(group.income_2);
+      const income1Percentage = Math.round((Number(group.income_1) / totalIncome) * 100);
+      const income2Percentage = 100 - income1Percentage;
+      
+      // Store income percentages for automatic calculation
+      window.relationshipIncomePercentages = {
+        [CURRENT_USER_ID()]: income1Percentage,
+        // Find the other member's ID
+        other: income2Percentage
+      };
+      
+      // Update the expense summary with automatic percentages
+      updateExpenseSummaryFromForm();
+    }
+  } catch (e) {
+    console.warn('Could not fetch relationship income data:', e);
+  }
 }
 
 // ========================================
@@ -1110,9 +1341,17 @@ if (notFound.length) {
   showNotification(`Some users not found: ${notFound.join(', ')}`, 'error');
 }
 
-if (resolvedUsers.length === 0) {
-  showNotification('Add at least one existing user by username to create a group.', 'error');
-  return;
+// Validation for relationship groups: exactly 2 members (creator + 1 other)
+if (groupCategory === 'relationship') {
+  if (resolvedUsers.length !== 1) {
+    showNotification('Relationship groups must have exactly 2 members (you + 1 partner).', 'error');
+    return;
+  }
+} else {
+  if (resolvedUsers.length === 0) {
+    showNotification('Add at least one existing user by username to create a group.', 'error');
+    return;
+  }
 }
 
 try {
@@ -1246,29 +1485,49 @@ function updateExpenseSummary(amount, paidById, selectedIds, method) {
   let totalPercentage = 0;
   
   if (method === 'percentage') {
-    // Get percentage inputs
-    const percentageInputs = Array.from(document.querySelectorAll('#percentageInputs input'));
-    const percentages = [];
+    // Check if this is a relationship group with automatic income-based splitting
+    const isRelationshipGroup = currentGroup?.category === 'relationship';
     
-    // Validate percentages
-    percentageInputs.forEach((input, index) => {
-      const pct = parseFloat(input.value) || 0;
-      percentages.push(pct);
-      totalPercentage += pct;
-    });
+    if (isRelationshipGroup && currentGroup?.income_1 && currentGroup?.income_2) {
+      // Automatic relationship group splitting based on income
+      const totalIncome = Number(currentGroup.income_1) + Number(currentGroup.income_2);
+      const income1Percentage = (Number(currentGroup.income_1) / totalIncome) * 100;
+      const income2Percentage = (Number(currentGroup.income_2) / totalIncome) * 100;
+      const creatorId = CURRENT_USER_ID();
+      
+      shares = involvedMembers.map(member => {
+        const memberId = member.id || member.user_id;
+        const percentage = memberId === creatorId ? income1Percentage : income2Percentage;
+        const share = (amount * percentage) / 100;
+        return { member, share, percentage };
+      });
+      
+      totalPercentage = 100; // Always 100% for relationship groups
+    } else {
+      // Manual percentage inputs for other groups
+      const percentageInputs = Array.from(document.querySelectorAll('#percentageInputs input'));
+      const percentages = [];
+      
+      // Validate percentages
+      percentageInputs.forEach((input, index) => {
+        const pct = parseFloat(input.value) || 0;
+        percentages.push(pct);
+        totalPercentage += pct;
+      });
 
-    // Validate total percentage
-    if (Math.abs(totalPercentage - 100) > 0.1) {
-      container.innerHTML = '<p class="has-text-danger">Total percentage must equal 100%</p>';
-      return;
+      // Validate total percentage
+      if (Math.abs(totalPercentage - 100) > 0.1) {
+        container.innerHTML = '<p class="has-text-danger">Total percentage must equal 100%</p>';
+        return;
+      }
+
+      // Calculate shares based on percentages
+      shares = involvedMembers.map((member, index) => {
+        const pct = percentages[index] || 0;
+        const share = (amount * pct) / 100;
+        return { member, share, percentage: pct };
+      });
     }
-
-    // Calculate shares based on percentages
-    shares = involvedMembers.map((member, index) => {
-      const pct = percentages[index] || 0;
-      const share = (amount * pct) / 100;
-      return { member, share, percentage: pct };
-    });
   } else {
     // Equitable split
     const sharePerPerson = amount / selectedIds.length;
@@ -1611,9 +1870,31 @@ async function prepareAddExpenseModal(groupId) {
       showNotification('No hay miembros en el grupo.', 'error');
       return;
   }
+  
+  // Get group info to check if it's a relationship group
+  let isRelationshipGroup = false;
+  try {
+    const groupInfo = await apiFetch(`/expense_groups/${groupId}`);
+    const group = Array.isArray(groupInfo) ? groupInfo[0] : groupInfo;
+    isRelationshipGroup = group?.category === 'relationship';
+  } catch (e) {
+    console.warn('Could not fetch group info:', e);
+  }
+  
   populatePaidBySelect(members);
-  populateMembersCheckboxes(members);
-  handleSplitMethodChange();
+  
+  if (isRelationshipGroup) {
+    // For relationship groups, hide member selection and split method sections
+    hideExpenseFormSections(['expenseMembersCheckboxes', 'splitMethod']);
+    // Auto-select all members and set to percentage split
+    populateMembersCheckboxes(members, true); // true = auto-select all
+    setRelationshipSplitMethod();
+  } else {
+    // For other groups, show all sections normally
+    showExpenseFormSections(['expenseMembersCheckboxes', 'splitMethod']);
+    populateMembersCheckboxes(members);
+    handleSplitMethodChange();
+  }
 }
 
 /**

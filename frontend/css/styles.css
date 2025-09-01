@@ -126,54 +126,59 @@
 
 /* Debt Breakdown Styles */
 .debt-breakdown-section {
-  margin-top: 1.5rem;
-  background: var(--card-bg);
-  border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .debt-breakdown-header {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 1.2rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.debt-breakdown-header i {
+    color: var(--primary-color);
 }
 
 .debt-breakdown-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .debt-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.75rem 1rem;
-  background: var(--bg-primary);
-  border-radius: 8px;
-  border-left: 4px solid #ff3860;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--bg-color);
+    border-radius: 8px;
+    border-left: 4px solid transparent;
+}
+
+.debt-item.owes {
+    border-left-color: #ff6b6b;
+}
+
+.debt-item.owed {
+    border-left-color: #51cf66;
 }
 
 .debt-item.loading {
-  justify-content: center;
-  gap: 0.5rem;
-  color: var(--text-secondary);
-  border-left-color: var(--primary-color);
+    justify-content: center;
+    color: var(--text-secondary);
 }
 
-.debt-item.you-owe {
-  border-left-color: #ff3860;
-  background: rgba(255, 56, 96, 0.05);
-}
-
-.debt-item.owes-you {
-  border-left-color: #00d1b2;
-  background: rgba(0, 209, 178, 0.05);
+.debt-item-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .debt-description {
@@ -376,6 +381,47 @@ body {
     position: relative;
     overflow: hidden;
     transition: all var(--transition-base);
+}
+
+/* Group type badge styles */
+.group-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-left: 0.5rem;
+}
+
+.group-type-badge.relationship {
+  background-color: #ffe0e6;
+  color: #d63384;
+  border: 1px solid #f8d7da;
+}
+
+.group-type-badge.trip {
+  background-color: #d1f2eb;
+  color: #0f5132;
+  border: 1px solid #badbcc;
+}
+
+.group-type-badge.other {
+  background-color: #cff4fc;
+  color: #055160;
+  border: 1px solid #b8daff;
+}
+
+/* Compact badges for group cards */
+.group-card .group-type-badge {
+  padding: 0.15rem 0.35rem;
+  font-size: 0.7rem;
+  margin-left: 0.25rem;
+}
+
+.group-card .group-type-badge i {
+  font-size: 0.6rem;
 }
 
 /* Navigation Styles */
@@ -1255,9 +1301,58 @@ body {
 
 .group-header {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: var(--spacing-md);
     margin-bottom: var(--spacing-lg);
+}
+
+.group-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.group-title-row h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.group-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.stat-value {
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    opacity: 0.8;
+}
+
+.stat-value.positive {
+    color: #00d1b2;
+}
+
+.stat-value.negative {
+    color: #ff3860;
+}
+
+.stat-value.zero {
+    color: var(--text-secondary);
 }
 
 .group-avatar {
@@ -1287,45 +1382,20 @@ body {
     opacity: 0.8;
 }
 
-.group-stats {
-    display: flex;
-    justify-content: space-between;
-    text-align: center;
-    margin-top: auto;
-}
-
-.stat-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-.stat-value {
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: var(--primary-color);
-}
-
-.stat-label {
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-    opacity: 0.8;
-}
-
 .add-group-card {
     background: var(--card-bg);
     backdrop-filter: blur(20px);
     border-radius: var(--radius-xl);
-    padding: 2.5rem;
-    border: 2px dashed var(--primary-color);
-    transition: all var(--transition-base);
+    padding: var(--spacing-lg);
     cursor: pointer;
+    transition: var(--transition-smooth);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: var(--shadow-sm);
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    opacity: 0.8;
+    gap: var(--spacing-md);
+    min-height: 180px;
+    justify-content: space-between;
 }
 
 .add-group-card:hover {

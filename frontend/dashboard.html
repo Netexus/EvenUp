@@ -91,6 +91,7 @@
                 <div class="group-details-info">
                     <div class="group-name-container">
                         <h1 class="group-name" id="groupNameTitle"></h1>
+                        <span class="group-type-badge" id="groupTypeBadge" style="display: none;"></span>
                         <button class="edit-group-name-btn" onclick="editGroupName()">
                             <i class="fas fa-edit"></i>
                         </button>
@@ -210,7 +211,7 @@
 
                     <div id="dynamicFormSection"></div>
 
-                    <div class="field mt-4">
+                    <div class="field mt-4" id="addMembersField">
                         <label class="label">Add Members</label>
                         <div class="control">
                             <div class="tags are-medium" id="memberTags">
@@ -221,7 +222,11 @@
                             <input class="input is-primary" type="text" id="addMemberInput"
                                 placeholder="Enter member email or username">
                         </div>
-                        <p class="help">Press Enter to add a member</p>
+                        <p class="help" id="memberHelp">Press Enter to add a member</p>
+                        <div class="notification is-info is-light" id="relationshipMemberInfo" style="display: none; margin-top: 10px;">
+                            <i class="fas fa-heart"></i>
+                            <strong>Relationship groups:</strong> Add exactly 1 partner. Expenses will be automatically split based on income percentages.
+                        </div>
                     </div>
                 </form>
             </section>
@@ -325,7 +330,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="field">
+                    <div class="field" id="expenseMembersField">
                         <label class="label">Members Involved</label>
                         <div class="control">
                             <div id="expenseMembersCheckboxes" class="checkbox-list-horizontal">
@@ -333,7 +338,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="field">
+                    <div class="field" id="splitMethodField">
                         <label class="label">Split Method</label>
                         <div class="control">
                             <label class="radio">
@@ -345,6 +350,10 @@
                                 Percentage
                             </label>
                         </div>
+                    </div>
+                    <div class="notification is-success is-light" id="relationshipExpenseInfo" style="display: none; margin-bottom: 15px;">
+                        <i class="fas fa-heart"></i>
+                        <strong>Relationship Group:</strong> This expense will be automatically split based on income percentages. Both partners are included automatically.
                     </div>
                     <div id="percentageSplitSection" class="field" style="display: none;">
                         <label class="label">Split by Percentage</label>
