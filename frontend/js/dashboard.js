@@ -272,9 +272,10 @@ for (const g of (groups || [])) {
   
   // Determine balance display
   const balanceClass = userBalance > 0 ? 'positive' : userBalance < 0 ? 'negative' : 'zero';
-  const balanceText = userBalance > 0 ? `You're owed $${userBalance.toFixed(2)}` : 
-                     userBalance < 0 ? `You owe $${Math.abs(userBalance).toFixed(2)}` : 
-                     'All settled up';
+  const balanceAmount = userBalance === 0 ? '$0.00' : `$${Math.abs(userBalance).toFixed(2)}`;
+  const balanceLabel = userBalance > 0 ? 'You\'re Owed' : 
+                      userBalance < 0 ? 'You Owe' : 
+                      'Your Balance';
   
   card.innerHTML = `
     <div class="group-header">
@@ -293,8 +294,8 @@ for (const g of (groups || [])) {
         <span class="stat-label">Total Expenses</span>
       </div>
       <div class="stat-item balance-stat">
-        <span class="stat-value ${balanceClass}">${balanceText}</span>
-        <span class="stat-label">Your Balance</span>
+        <span class="stat-value ${balanceClass}">${balanceAmount}</span>
+        <span class="stat-label">${balanceLabel}</span>
       </div>
     </div>
   `;
