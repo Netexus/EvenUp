@@ -6,7 +6,7 @@ exports.register = async (req, res) => {
     try {
         const { email, fullName, username, password, birthDate, phoneNumber } = req.body;
 
-        // Validar datos
+        // Validate data
         if (!email || !fullName || !username || !password || !birthDate || !phoneNumber) {
             return res.status(400).json({
                 status: 'error',
@@ -14,7 +14,7 @@ exports.register = async (req, res) => {
             });
         }
 
-        // Verificar si el usuario ya existe
+        // Check if the user already exists
         const [existingUsers] = await pool.query(
             'SELECT * FROM app_users WHERE email = ? OR username = ? OR phone = ?',
             [email, username, phoneNumber]
@@ -27,11 +27,11 @@ exports.register = async (req, res) => {
             });
         }
 
-        // Hash de la contraseña
+        // Password hash
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Insertar usuario (incluye birthdate requerido por el esquema)
+        // Insert user
         const [result] = await pool.query(
             'INSERT INTO app_users (name, username, phone, email, birthdate, password_hash) VALUES (?, ?, ?, ?, ?, ?)',
             [fullName, username, phoneNumber, email, birthDate, hashedPassword]
