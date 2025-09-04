@@ -227,7 +227,5 @@ module.exports = {
   // Also export the controller objects directly for named imports
   ExpensesSummaryController,
   ExpenseDetailController,
-
-  // Exporta la función de miembros del grupo
   getGroupMembers
 };
