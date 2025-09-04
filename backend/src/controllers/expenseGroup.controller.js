@@ -1,9 +1,5 @@
 const ExpenseGroupModel = require('../models/expenseGroup.model');
 
-// ============================
-// Controladores para Expense Groups
-// ============================
-
 const expenseGroupController = {
   getAllGroups: async (req, res) => {
     try {
@@ -81,7 +77,4 @@ const expenseGroupController = {
   }
 };
 
-// ============================
-// Exportar para el enrutado
-// ============================
 module.exports = expenseGroupController;
