@@ -2,19 +2,19 @@ const express = require('express');
 const router = express.Router();
 const controller = require('../controllers/groupMemberships.controller');
 
-// Crear membresía
+// Create membership
 router.post('/', controller.create);
 
-// Obtener miembros por grupo
+// Get members by group
 router.get('/group/:group_id', controller.getByGroup);
 
-// Obtener membresía por ID
+// Get membership by ID
 router.get('/:membership_id', controller.getById);
 
-// Actualizar rol de membresía
+// Update membership role
 router.put('/:membership_id/role', controller.updateRole);
 
-// Eliminar membresía
+// Delete membership
 router.delete('/:membership_id', controller.delete);
 
 module.exports = router;
